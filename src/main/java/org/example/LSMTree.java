@@ -8,8 +8,7 @@ import java.util.function.Predicate;
 import com.google.common.base.Charsets;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
-import org.json.JSONArray;
-import org.json.JSONObject;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
