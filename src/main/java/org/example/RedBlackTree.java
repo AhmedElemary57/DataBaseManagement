@@ -14,7 +14,6 @@ import static java.awt.Color.RED;
 public class RedBlackTree<T extends Comparable<T>> {
     private Node<T> root;
 
-
     public void insert(T key , T value) {
         Node<T> nodeToBeInsert = new Node<>(key,value);
         Node<T> tmpRoot;

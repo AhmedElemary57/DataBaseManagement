@@ -50,8 +50,8 @@ public class Server {
         int numberOfNodes=Integer.valueOf(args[1]);
         System.out.println("Number Of nodes : "+numberOfNodes);
         int nodeNumber=Integer.valueOf(args[0]);
-        int numberOfVirtualNodes=Integer.valueOf(args[2]);
-        RingStructure ringStructure= RingStructure.getInstance(numberOfNodes,numberOfVirtualNodes);
+        int numberOfVirtualNodes=Integer.valueOf(args[2]),replicationFactor=3;
+        RingStructure ringStructure= RingStructure.getInstance(numberOfNodes,numberOfVirtualNodes, replicationFactor);
         ringStructure.buildMap(10);
 
         System.out.println(".^^^^^ Node number : "+args[0]);
@@ -75,7 +75,7 @@ public class Server {
 
                 int nodeIndexOnRing=ringStructure.find_Node(hashCode);
                 System.out.println("Set index in correspond Node : "+ nodeIndexOnRing);
-                int neededPortNumber= ringStructure.nodes_Ports.get(nodeIndexOnRing);
+                int neededPortNumber= ringStructure.nodes_Ports.get(nodeIndexOnRing).get(0);
 
                 System.out.println("Correct Node Port : ------->" + neededPortNumber);
                 System.out.println("neededPortNumber is " + neededPortNumber +"  #######  " +"This Port is  "+portNumber);
@@ -99,7 +99,7 @@ public class Server {
                 System.out.println("Hash Code is : "+hashCode);
                 int nodeIndexOnRing=ringStructure.find_Node(hashCode);
                 System.out.println("Get index in correspond Node : "+ nodeIndexOnRing);
-                int neededPortNumber= ringStructure.nodes_Ports.get(nodeIndexOnRing);
+                int neededPortNumber= ringStructure.nodes_Ports.get(nodeIndexOnRing).get(0);
                 System.out.println("Correct Node Port : ------->" + neededPortNumber);
                 System.out.println("neededPortNumber is " + neededPortNumber +"  #######  " +"This Port is  "+portNumber);
                 if (neededPortNumber != portNumber){

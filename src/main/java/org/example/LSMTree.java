@@ -1,5 +1,13 @@
 package org.example;
-
+import com.google.common.base.Charsets;
+import com.google.common.hash.BloomFilter;
+import com.google.common.hash.Funnels;
+import java.io.BufferedReader;
+import java.util.function.Predicate;
+import com.google.common.base.Charsets;
+import com.google.common.hash.BloomFilter;
+import com.google.common.hash.Funnels;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.*;
 import java.util.ArrayList;
@@ -10,33 +18,57 @@ import java.util.Map;
 public class LSMTree {
     String serverName,memTableID,nextSegmentID;
     int maxMemeTableSize, memTableSize,segmentNumber;
+    List<Integer> segmentIDs;
     RedBlackTree<String> memTable;
-
+    Map<String,String> rowCache;
+    BloomFilter<String> bloomFilter ;
     public LSMTree(String serverName, String memTableID, int maxMemeTableSize) {
         this.serverName = serverName;
         this.memTableID = memTableID;
         this.maxMemeTableSize = maxMemeTableSize;
         this.memTable = new RedBlackTree<>();
-        this.segmentNumber=1;
-         this.nextSegmentID=String.valueOf(segmentNumber);
-
-
+        this.segmentNumber=0;
+        this.nextSegmentID=String.valueOf(segmentNumber);
+        this.rowCache = new HashMap<>();
+        this.bloomFilter = BloomFilter.create(Funnels.stringFunnel(Charsets.UTF_16), 100, 0.01);
+        segmentIDs= new ArrayList<>();
     }
-    Map<String,String> rowCache;
-
-    String getValueOf(String key){
+/**
+ * There are some steps that we should do to mange get requests in our app assuming one replica 'that will be repeated for each replica'
+ *
+ *     Check our cache row and return to the client with the result if present
+ *     If not present check in the mem-table and return it if present
+ *     Ask bloom filter if it is present
+ *     If not so we will check our SSTable from newer to oldest to get the value.
+ * **/
+    String getValueOf(String key) throws IOException {
+        //check our cache row and return to the client with the result if present
+        if (rowCache.containsKey(key)){
+            return rowCache.get(key);
+        }
+        //If not present check in the mem-table and return it if present
         String value = memTable.search(key);
         if (memTable.search(key)!=null){
             return value;
         }else {
-            return "";
+            //Ask bloom filter if it is present
+            if (bloomFilter.mightContain(key)){
+                //If not so we will check our SSTable from newer to oldest to get the value.
+                return getValueFromSSTable(key,segmentIDs.size());
+            }else {
+                return null;
+            }
+
         }
+
     }
     void put(String key,String value) throws IOException {
         ////func
         ///
+
         memTable.insert(key,value);
         memTableSize++;
+        bloomFilter.put(key);
         //invalidate the row cache value if it is there
         if(rowCache.containsKey(key)){
             //assume removing the invalidation is done
@@ -44,6 +76,7 @@ public class LSMTree {
         }
         if (memTableSize>=maxMemeTableSize){
             flushToDisk();
+            segmentIDs.add(segmentNumber);
             memTableSize=0;
             memTable.clear();
         }
@@ -53,6 +86,8 @@ public class LSMTree {
         //flush to disk
         //write the memtable to disk in a json file
         String diskReplicaPath= "./Node_Number"+serverName+"/ReplicaOf"+memTableID+"/data/";
+        segmentNumber++;
+        nextSegmentID=String.valueOf(segmentNumber);
         String path = nextSegmentID+".json";
 
         //write to disk
@@ -78,18 +113,43 @@ public class LSMTree {
         writer.write(jsonObject.toString());
         fileWriter.flush();
 
-        segmentNumber++;
-        nextSegmentID=String.valueOf(segmentNumber);
     }
+    String getValueFromSSTable(String key,int fromSegment) throws IOException {
+        if (fromSegment==0){
+            return null;
+        }
 
+        //get the value from the SSTable
+        //get the path of the SSTable
+        String diskReplicaPath= "./Node_Number"+serverName+"/ReplicaOf"+memTableID+"/data/";
+        String path = String.valueOf(segmentIDs.get(fromSegment))+".json";
+        //read the file
+        File file = new File(diskReplicaPath+path);
+        BufferedReader br = new BufferedReader(new FileReader(file));
+        String line = br.readLine();
+        JSONObject jsonObject = new JSONObject(line);
+        JSONArray jsonArray = jsonObject.getJSONArray("data");
+
+        for (int i=0;i<jsonArray.length();i++){
+            JSONObject data = jsonArray.getJSONObject(i);
+            Map<String,String> map = new HashMap<>();
+            map.put("key",data.getString("key"));
+            map.put("value",data.getString("value"));
+            // TODO Adding the version number to key
+            if (map.get("key").equals(key)){
+                return map.get("value").toString();
+            }
+        }
+        return getValueFromSSTable(key,fromSegment-1);
+    }
     public static void main(String[] args) throws IOException {
-        LSMTree lsmTree = new LSMTree("5005","5708",5);
-        lsmTree.put("1","1");
+        LSMTree lsmTree = new LSMTree("5075","4785",5);
+        lsmTree.put("1","a");
         lsmTree.put("2","2");
         lsmTree.put("3","3");
         lsmTree.put("4","4");
         lsmTree.put("5","5");
-        lsmTree.put("6","6");
+        lsmTree.put("6","I'm here");
         lsmTree.put("7","7");
         lsmTree.put("8","8");
         lsmTree.put("9","9");
@@ -124,6 +184,7 @@ public class LSMTree {
         lsmTree.put("38","38");
         lsmTree.put("39","39");
         lsmTree.put("40","40");
+        System.out.println(lsmTree.getValueFromSSTable("6", 8));
 
 
     }
