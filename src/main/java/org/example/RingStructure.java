@@ -4,18 +4,29 @@ import java.util.*;
 import org.apache.commons.codec.digest.MurmurHash3;
 
 public class RingStructure {
+/**
+ * n case of using all in all topology do the following.
+ * Using replicas in the routing function
+ *
+ *     We have a replicas map of nodes and their replicas (port -> array of ports).
+ *     Change nodes_Ports map from <Integer, Integer> to <Integer, List>
+ *     Use the value of nodes_Ports map as a key in the replicas map to get the replicas ports and then appends it to the List
+ * */
+    int numberOfNodes, numberOfVirtualNodes, replicationFactor;
+    Map<Integer,List<Integer>> nodes_Ports = new HashMap<>();
 
-    int numberOfNodes, numberOfVirtualNodes;
     private volatile static RingStructure uniqueInstance;
-    private RingStructure(int numberOfNodes, int numberOfVirtualNodes) {
+    private RingStructure(int numberOfNodes, int numberOfVirtualNodes, int replicationFactor) {
         this.numberOfNodes=numberOfNodes;
         this.numberOfVirtualNodes=numberOfVirtualNodes;
+        this.replicationFactor=replicationFactor;
+
     }
-    public static RingStructure getInstance(int numberOfNodes, int numberOfVirtualNodes) {
+    public static RingStructure getInstance(int numberOfNodes, int numberOfVirtualNodes, int replicationFactor) {
         if (uniqueInstance==null){
             synchronized (RingStructure.class){
                 if (uniqueInstance==null){
-                    uniqueInstance= new RingStructure(numberOfNodes, numberOfVirtualNodes);
+                    uniqueInstance= new RingStructure(numberOfNodes, numberOfVirtualNodes, replicationFactor);
                 }
             }
         }
@@ -43,14 +54,9 @@ public class RingStructure {
     }
     //5000 get numberOf nodes then number of virtual nodes
     // fixed to 10
-     Map<Integer,Integer> nodes_Ports = new HashMap<>();
      List<Integer> keys= new ArrayList<>();
     void buildMap(int numberOfVirtualNodes) {
-        int range = 2000000000;
         for (int i = 1; i <= numberOfNodes; i++) {
-            keys.add(range/numberOfNodes);
-            nodes_Ports.put(range/numberOfNodes,5000+i);
-
             int amp = 414248133;
             for (int j = 0; j < numberOfVirtualNodes; j++) {
                 amp += 87187;
@@ -58,7 +64,8 @@ public class RingStructure {
                 String string = Integer.toString(amp).concat(Integer.toString(portNumber*7979));
                 int hashed = MurmurHash3.hash32x86(string.getBytes());
                 keys.add(hashed);
-                nodes_Ports.put(hashed,portNumber);
+                List<Integer> replicas = getReplicas(portNumber);
+                nodes_Ports.put(hashed,replicas);
             }
         }
         Collections.sort(keys);
@@ -66,10 +73,22 @@ public class RingStructure {
     void addNode(int number){
 
     }
+    List<Integer> getReplicas(int currentPortNumber) {
+        int index = currentPortNumber- 5000;
+        List<Integer> replicas = new ArrayList<>();
+        for (int i = 0; i < replicationFactor; i++) {
+            replicas.add(5000+index);
+            index = (index + 1) % numberOfNodes;
+        }
+        return replicas;
+    }
 
     public static void main(String[] args) {
-        //buildMap(5,20);
-
+        RingStructure ringStructure = RingStructure.getInstance(5,5,3);
+        ringStructure.buildMap(5);
+        System.out.println(ringStructure.nodes_Ports);
+        System.out.println(ringStructure.keys);
+        System.out.println(ringStructure.find_Node(10));
     }
 
 }
