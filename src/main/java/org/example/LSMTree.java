@@ -86,7 +86,7 @@ public class LSMTree {
         File myObj = new File(serverName+".txt");
         try {
             FileWriter myWriter = new FileWriter(serverName+".txt",true);
-            myWriter.write(key+" , "+value+'\n');
+            myWriter.write(key+","+value+'\n');
             myWriter.close();
             System.out.println("Successfully wrote to the file.");
         } catch (IOException e) {
