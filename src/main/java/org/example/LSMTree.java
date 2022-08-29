@@ -3,6 +3,7 @@ import com.google.common.base.Charsets;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
 import java.io.BufferedReader;
+import java.util.*;
 import java.util.function.Predicate;
 import com.google.common.base.Charsets;
 import com.google.common.hash.BloomFilter;
@@ -10,14 +11,10 @@ import com.google.common.hash.Funnels;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
 
-import java.util.List;
-import java.util.Map;
 public class LSMTree {
     String serverName,memTableID,nextSegmentID;
-    int maxMemeTableSize, memTableSize,segmentNumber;
+    int maxMemeTableSize, memTableSize,segmentNumber,versionNumber;
     List<Integer> segmentIDs;
     RedBlackTree<String> memTable;
     Map<String,String> rowCache;
@@ -32,6 +29,7 @@ public class LSMTree {
         this.rowCache = new HashMap<>();
         this.bloomFilter = BloomFilter.create(Funnels.stringFunnel(Charsets.UTF_16), 100, 0.01);
         segmentIDs= new ArrayList<>();
+        this.versionNumber=0;
     }
 /**
  * There are some steps that we should do to mange get requests in our app assuming one replica 'that will be repeated for each replica'
@@ -88,31 +86,38 @@ public class LSMTree {
         String diskReplicaPath= "./Node_Number"+serverName+"/ReplicaOf"+memTableID+"/data/";
         segmentNumber++;
         nextSegmentID=String.valueOf(segmentNumber);
-        String path = nextSegmentID+".json";
+        String path = nextSegmentID+".txt";
 
         //write to disk
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.put("segmentID",nextSegmentID);
         List<Node<String>> nodesOfRedBlackTree = memTable.inOrderTraversal();
-        List<Map<String,String>> listOfData = new ArrayList<>();
-        for (Node<String> node:nodesOfRedBlackTree){
-            Map<String,String> data = new HashMap<>();
-            data.put("key",node.getKey());
-            data.put("value",node.getValue());
-            listOfData.add(data);
-        }
-        jsonObject.put("data",listOfData);
-
         File file = new File("."+File.separator+diskReplicaPath);
         if (!file.exists()) {
             file.mkdirs();
         }
+        FileWriter fileWriter = new FileWriter(diskReplicaPath+path,true);
+        for (Node<String> node : nodesOfRedBlackTree) {
+            fileWriter.write(node.getKey()+","+node.getValue()+","+'\n');
+            versionNumber++;
+        }
+        fileWriter.close();
 
-        FileWriter fileWriter = new FileWriter(diskReplicaPath+path);
-        PrintWriter writer = new PrintWriter(fileWriter);
-        writer.write(jsonObject.toString());
-        fileWriter.flush();
-
+    }
+    //string binary search
+    String searchKeyInSegment(String key,String[] segmentData) throws IOException {
+        int low = 0;
+        int high = segmentData.length-1;
+        while (low <= high) {
+            int mid = (low + high) / 2;
+            String[] keyValue = segmentData[mid].split(",");
+            if (keyValue[0].compareTo(key) < 0) {
+                low = mid + 1;
+            } else if (keyValue[0].compareTo(key) > 0) {
+                high = mid - 1;
+            } else {
+                return keyValue[1];
+            }
+    }
+        return null;
     }
     String getValueFromSSTable(String key,int fromSegment) throws IOException {
         if (fromSegment==0){
@@ -122,24 +127,23 @@ public class LSMTree {
         //get the value from the SSTable
         //get the path of the SSTable
         String diskReplicaPath= "./Node_Number"+serverName+"/ReplicaOf"+memTableID+"/data/";
-        String path = String.valueOf(segmentIDs.get(fromSegment))+".json";
+        String path = String.valueOf(segmentIDs.get(fromSegment-1))+".txt";
         //read the file
         File file = new File(diskReplicaPath+path);
-        BufferedReader br = new BufferedReader(new FileReader(file));
-        String line = br.readLine();
-        JSONObject jsonObject = new JSONObject(line);
-        JSONArray jsonArray = jsonObject.getJSONArray("data");
-
-        for (int i=0;i<jsonArray.length();i++){
-            JSONObject data = jsonArray.getJSONObject(i);
-            Map<String,String> map = new HashMap<>();
-            map.put("key",data.getString("key"));
-            map.put("value",data.getString("value"));
-            // TODO Adding the version number to key
-            if (map.get("key").equals(key)){
-                return map.get("value").toString();
-            }
+        Scanner myReader = new Scanner(file);
+        List<String> lines = new ArrayList<>();
+        while (myReader.hasNextLine()) {
+            String data = myReader.nextLine();
+            lines.add(data);
         }
+        myReader.close();
+        //search the value in the file
+        String value = searchKeyInSegment(key,lines.toArray(new String[lines.size()]));
+        if (value!=null) {
+            return value;
+        }
+
+
         return getValueFromSSTable(key,fromSegment-1);
     }
     public static void main(String[] args) throws IOException {
