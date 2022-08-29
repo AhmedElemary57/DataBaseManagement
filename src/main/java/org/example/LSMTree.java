@@ -65,7 +65,7 @@ public class LSMTree {
         ///
 
         memTable.insert(key,value);
-        memTableSize++;
+        memTableSize=memTable.size();
         bloomFilter.put(key);
         //invalidate the row cache value if it is there
         if(rowCache.containsKey(key)){
@@ -94,7 +94,7 @@ public class LSMTree {
         if (!file.exists()) {
             file.mkdirs();
         }
-        FileWriter fileWriter = new FileWriter(diskReplicaPath+path,true);
+        FileWriter fileWriter = new FileWriter(diskReplicaPath+path);
         for (Node<String> node : nodesOfRedBlackTree) {
             fileWriter.write(node.getKey()+","+node.getValue()+","+'\n');
             versionNumber++;
@@ -150,7 +150,7 @@ public class LSMTree {
         LSMTree lsmTree = new LSMTree("5075","4785",5);
         lsmTree.put("1","a");
         lsmTree.put("2","2");
-        lsmTree.put("3","3");
+        lsmTree.put("2","3");
         lsmTree.put("4","4");
         lsmTree.put("5","5");
         lsmTree.put("6","I'm here");
@@ -188,7 +188,7 @@ public class LSMTree {
         lsmTree.put("38","38");
         lsmTree.put("39","39");
         lsmTree.put("40","40");
-        System.out.println(lsmTree.getValueFromSSTable("6", 8));
+        System.out.println(lsmTree.getValueFromSSTable("2", lsmTree.segmentIDs.size()));
 
 
     }
