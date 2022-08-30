@@ -103,17 +103,22 @@ public class Main {
             myObj.delete();
             myObj2.delete();
         }
+        segmentIDs.clear();
+        System.out.println(tempID);
         for (int k = 1; k < tempID; k++) {
             File file = new File("t"+String.valueOf(k)+".txt");
             File rename = new File(String.valueOf(k)+".txt");
             file.renameTo(rename);
+            segmentIDs.add(k);
         }
+        segmentIDs.add(tempID);
         if(new File("t"+String.valueOf(tempID)+".txt").exists())new File("t"+String.valueOf(tempID)+".txt").delete();
         if(nextSegmentID==1){
             File file = new File(String.valueOf(counter+1)+".txt");
             File rename = new File(String.valueOf(tempID)+".txt");
             file.renameTo(rename);
         }
+        nextSegmentID=tempID;
     }
 
 
@@ -128,6 +133,7 @@ public class Main {
         for (int i = 0; i < segmentIDs.size(); i++) {
             System.out.println(segmentIDs.get(i));
         }
+        System.out.println(nextSegmentID);
     }
 
 

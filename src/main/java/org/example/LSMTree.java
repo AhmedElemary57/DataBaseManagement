@@ -161,17 +161,23 @@ public class LSMTree {
             myObj.delete();
             myObj2.delete();
         }
+        segmentIDs.clear();
+        System.out.println(tempID);
         for (int k = 1; k < tempID; k++) {
             File file = new File(diskReplicaPath+"t"+String.valueOf(k)+".txt");
             File rename = new File(diskReplicaPath+String.valueOf(k)+".txt");
             file.renameTo(rename);
+            segmentIDs.add(k);
         }
-        if(new File(diskReplicaPath+"t"+String.valueOf(tempID)+".txt").exists())new File("t"+String.valueOf(tempID)+".txt").delete();
+        segmentIDs.add(tempID);
+        if(new File(diskReplicaPath+"t"+String.valueOf(tempID)+".txt").exists())
+            new File(diskReplicaPath+"t"+String.valueOf(tempID)+".txt").delete();
         if(nextSegmentID==1){
             File file = new File(diskReplicaPath+String.valueOf(counter+1)+".txt");
             File rename = new File(diskReplicaPath+String.valueOf(tempID)+".txt");
             file.renameTo(rename);
         }
+        segmentNumber=tempID;
     }
 
 
