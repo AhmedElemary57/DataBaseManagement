@@ -16,6 +16,9 @@ import java.util.HashMap;
 
 import java.util.List;
 import java.util.Map;
+
+import static java.lang.Thread.sleep;
+
 public class LSMTree {
     String serverName,memTableID,nextSegmentID;
     int maxMemeTableSize, memTableSize,segmentNumber,versionNumber;
@@ -112,11 +115,17 @@ public class LSMTree {
         FileWriter fileWriter = new FileWriter(diskReplicaPath+path);
         for (Node<String> node : nodesOfRedBlackTree) {
             fileWriter.write(node.getKey()+","+node.getValue()+","+'\n');
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             versionNumber++;
         }
         fileWriter.close();
 
     }
+
     //string binary search
     String searchKeyInSegment(String key,String[] segmentData) throws IOException {
         int low = 0;
