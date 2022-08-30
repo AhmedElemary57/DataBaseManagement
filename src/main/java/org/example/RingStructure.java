@@ -61,7 +61,6 @@ public class RingStructure {
     // fixed to 10
      List<Integer> keys= new ArrayList<>();
     void buildMap(int numberOfVirtualNodes) {
-        int range = 2000000000;
         for (int i = 1; i <= numberOfNodes; i++) {
             int amp = 414248133;
             for (int j = 0; j < numberOfVirtualNodes; j++) {
