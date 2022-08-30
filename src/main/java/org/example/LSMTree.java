@@ -16,8 +16,25 @@ import static java.lang.Thread.sleep;
 
 public class LSMTree {
     Integer nodeNumber,replicaId,nextSegmentID;
-    int maxMemeTableSize, memTableSize,segmentNumber,versionNumber;
-
+    int maxMemeTableSize, memTableSize,segmentNumber,versionNumber,maxSegmentSize;
+    List<Integer> segmentIDs;
+    RedBlackTree<String> memTable;
+    Map<String,String> rowCache;
+    BloomFilter<String> bloomFilter ;
+    public LSMTree(Integer serverName, Integer memTableID, int maxMemeTableSize, int maxSegmentSize) {
+        this.nodeNumber = serverName;
+        this.replicaId = memTableID;
+        this.maxMemeTableSize = maxMemeTableSize;
+        this.memTable = new RedBlackTree<>();
+        this.segmentNumber=0;
+        this.maxSegmentSize=maxSegmentSize;
+        this.nextSegmentID=segmentNumber;
+        this.rowCache = new HashMap<>();
+        this.bloomFilter = BloomFilter.create(Funnels.stringFunnel(Charsets.UTF_16), 100, 0.01);
+        segmentIDs= new ArrayList<>();
+        this.versionNumber=0;
+        this.rowCache= new HashMap<>();
+    }
     public Integer getNodeNumber() {
         return nodeNumber;
     }
@@ -49,24 +66,116 @@ public class LSMTree {
     public void setMemTableSize(int memTableSize) {
         this.memTableSize = memTableSize;
     }
+    public void mergeCompaction() throws IOException {
+        String diskReplicaPath= "./Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/data/";
+        String path = nextSegmentID+".txt";
+        int nextSegmentID=segmentNumber,maxSize=maxSegmentSize;
+        int tempID=1,size=0,counter;
+        boolean i=false,j=false;
+        if(nextSegmentID%2==1)counter=nextSegmentID-1;
+        else counter=nextSegmentID;
+        for(int k=0;k<counter;k+=2){
+            String file1name=diskReplicaPath+String.valueOf(k+1)+".txt";
+            String file2name=diskReplicaPath+String.valueOf(k+2)+".txt";
+            File myObj = new File(file1name);
+            File myObj2 = new File(file2name);
+            File temp = new File(diskReplicaPath+"t"+String.valueOf(tempID)+".txt");
+            Scanner myReader = new Scanner(myObj);
+            Scanner myReader2 = new Scanner(myObj2);
+            FileWriter myWriter = new FileWriter(diskReplicaPath+"t"+String.valueOf(tempID)+".txt",true);
+            String data=myReader.nextLine(),data2=myReader2.nextLine();
 
-    List<Integer> segmentIDs;
-    RedBlackTree<String> memTable;
-    Map<String,String> rowCache;
-    BloomFilter<String> bloomFilter ;
-    public LSMTree(Integer serverName, Integer memTableID, int maxMemeTableSize) {
-        this.nodeNumber = serverName;
-        this.replicaId = memTableID;
-        this.maxMemeTableSize = maxMemeTableSize;
-        this.memTable = new RedBlackTree<>();
-        this.segmentNumber=0;
-        this.nextSegmentID=segmentNumber;
-        this.rowCache = new HashMap<>();
-        this.bloomFilter = BloomFilter.create(Funnels.stringFunnel(Charsets.UTF_16), 100, 0.01);
-        segmentIDs= new ArrayList<>();
-        this.versionNumber=0;
-        this.rowCache= new HashMap<>();
+            String key1,key2;
+            while (myReader.hasNextLine() && myReader2.hasNextLine()) {
+                if(i)
+                    data = myReader.nextLine();
+                if(j)
+                    data2 = myReader2.nextLine();
+                key1=data.split(",")[0];
+                key2=data2.split(",")[0];
+                if(key1.equals(key2)){
+                    myWriter.write(data2+'\n');
+                    i=true;
+                    j=true;
+                }
+                else if(key1.compareTo(key2)>0){
+                    myWriter.write(data2+'\n');
+                    i=false;
+                    j=true;
+                }
+                else {
+                    myWriter.write(data+'\n');
+                    i=true;
+                    j=false;
+                }
+                size++;
+                if(size>=maxSize){
+                    myWriter.close();
+                    tempID++;
+                    myWriter = new FileWriter(diskReplicaPath+"t"+String.valueOf(tempID)+".txt",true);
+                    size=0;
+                }
+            }
+            if(!i) myWriter.write(data+'\n');
+            if(!j) myWriter.write(data2+'\n');
+            size++;
+            if(size>=maxSize){
+                myWriter.close();
+                tempID++;
+                myWriter = new FileWriter(diskReplicaPath+"t"+String.valueOf(tempID)+".txt",true);
+                size=0;
+            }
+            while (myReader.hasNextLine()){
+                data=myReader.nextLine();
+                myWriter.write(data+'\n');
+                size++;
+                if(size>=maxSize){
+                    myWriter.close();
+                    tempID++;
+                    myWriter = new FileWriter(diskReplicaPath+"t"+String.valueOf(tempID)+".txt",true);
+                    size=0;
+                }
+            }
+            while (myReader2.hasNextLine()){
+                data=myReader2.nextLine();
+                myWriter.write(data+'\n');
+                size++;
+                if(size>=maxSize){
+                    myWriter.close();
+                    tempID++;
+                    myWriter = new FileWriter(diskReplicaPath+"t"+String.valueOf(tempID)+".txt",true);
+                    size=0;
+                }
+            }
+            myReader.close();
+            myReader2.close();
+            myWriter.close();
+            nextSegmentID-=2;
+            segmentIDs.remove(0);
+            segmentIDs.remove(0);
+            i=false;
+            j=false;
+            if(size!=0)
+                tempID++;
+            size=0;
+            myObj.delete();
+            myObj2.delete();
+        }
+        for (int k = 1; k < tempID; k++) {
+            File file = new File(diskReplicaPath+"t"+String.valueOf(k)+".txt");
+            File rename = new File(diskReplicaPath+String.valueOf(k)+".txt");
+            file.renameTo(rename);
+        }
+        if(new File(diskReplicaPath+"t"+String.valueOf(tempID)+".txt").exists())new File("t"+String.valueOf(tempID)+".txt").delete();
+        if(nextSegmentID==1){
+            File file = new File(diskReplicaPath+String.valueOf(counter+1)+".txt");
+            File rename = new File(diskReplicaPath+String.valueOf(tempID)+".txt");
+            file.renameTo(rename);
+        }
     }
+
+
+
 /**
  * There are some steps that we should do to mange get requests in our app assuming one replica 'that will be repeated for each replica'
  *
@@ -115,9 +224,11 @@ public class LSMTree {
         }
     }
     void commitLogs(String key,String value){
-        File myObj = new File(nodeNumber +".txt");
+        String diskReplicaPath= "./Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
+        String path = diskReplicaPath+nextSegmentID+".txt";
+        File myObj = new File(path);
         try {
-            FileWriter myWriter = new FileWriter(nodeNumber +".txt",true);
+            FileWriter myWriter = new FileWriter(myObj,true);
             myWriter.write(key+","+value+'\n');
             myWriter.close();
             System.out.println("Successfully wrote to the file.");
@@ -194,8 +305,8 @@ public class LSMTree {
 
         return getValueFromSSTable(key,fromSegment-1);
     }
-    public static void main(String[] args) throws IOException {
-        LSMTree lsmTree = new LSMTree(5007,788,5);
+    public static void main(String[] args) throws IOException, InterruptedException {
+        LSMTree lsmTree = new LSMTree(5007,788,5,10);
         lsmTree.put("1","a");
         lsmTree.put("2","2");
         lsmTree.put("2","3");
@@ -237,6 +348,27 @@ public class LSMTree {
         lsmTree.put("39","39");
         lsmTree.put("40","40");
         System.out.println(lsmTree.getValueFromSSTable("2", lsmTree.segmentIDs.size()));
+        lsmTree.mergeCompaction();
+        lsmTree.put("1","a");
+        lsmTree.put("2","2");
+        lsmTree.put("2","3");
+        lsmTree.put("4","4");
+        lsmTree.put("5","5");
+        lsmTree.put("6","I'm here");
+        lsmTree.put("7","7");
+        lsmTree.put("8","8");
+        lsmTree.put("9","9");
+        lsmTree.put("10","10");
+        lsmTree.put("11","11");
+        lsmTree.put("12","12");
+        lsmTree.put("13","13");
+        lsmTree.put("14","14");
+        lsmTree.put("15","15");
+        lsmTree.put("16","16");
+        lsmTree.put("17","17");
+        lsmTree.put("18","18");
+        lsmTree.put("19","19");
+        lsmTree.mergeCompaction();
 
 
     }

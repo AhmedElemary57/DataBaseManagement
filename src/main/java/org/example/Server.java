@@ -89,7 +89,7 @@ public class Server {
         int numberOfNodes=Integer.valueOf(args[1]);
         System.out.println("Number Of nodes : "+numberOfNodes);
         int nodeNumber=Integer.valueOf(args[0]);
-        int numberOfVirtualNodes=Integer.valueOf(args[2]), replicationFactor=Integer.valueOf(args[3]);
+        int numberOfVirtualNodes=Integer.valueOf(args[2]), replicationFactor=Integer.valueOf(args[3]) ,maxSegmentSize=Integer.valueOf(args[4]);
         ringStructure= RingStructure.getInstance(numberOfNodes,numberOfVirtualNodes, replicationFactor);
         ringStructure.buildMap(10);
         ringStructure.nodesReplicasMapping.printWhichReplicasBelongToNode();
@@ -100,7 +100,7 @@ public class Server {
         List<LSMTree> lsmTrees = new ArrayList<LSMTree>();
         Map<Integer,List<Integer>> nodeReplicas= ringStructure.nodesReplicasMapping.whichReplicasBelongToNode;
         for (int i=0;i<replicationFactor;i++){
-            lsmTrees.add( new LSMTree(nodeNumber,nodeReplicas.get(portNumber).get(i),2) );
+            lsmTrees.add( new LSMTree(portNumber,nodeReplicas.get(portNumber).get(i),2,maxSegmentSize) );
         }
 
         ServerSocket serverSocket = new ServerSocket(portNumber);
