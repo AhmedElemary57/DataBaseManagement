@@ -6,7 +6,6 @@ import java.net.*;
 import java.io.*;;
 public class Server {
 
-    static LSMTree lsmTree = new LSMTree("serverName", "replica",10);
     static String currentValue;
 
     public static String startSendingRequestToOtherServer(int portNumber, String request) throws IOException {
@@ -33,7 +32,6 @@ public class Server {
         System.out.println(" ----- Received from Server : " +message);
         return message;
     }
-
     static void sendStringToSocket(Socket socket, String message) throws IOException {
         OutputStream outputStream = socket.getOutputStream();
         // create a data output stream from the output stream so we can send data through it
@@ -54,11 +52,13 @@ public class Server {
         int numberOfVirtualNodes=Integer.valueOf(args[2]),replicationFactor=3;
         RingStructure ringStructure= RingStructure.getInstance(numberOfNodes,numberOfVirtualNodes, replicationFactor);
         ringStructure.buildMap(10);
-
+        ringStructure.nodesReplicasMapping.printWhichReplicasBelongToNode();
         System.out.println(".^^^^^ Node number : "+args[0]);
 
         //Here we will start listening to any one who wants to connect to the server
         int portNumber=5000+nodeNumber;
+        LSMTree lsmTree = new LSMTree(String.valueOf(portNumber), String.valueOf(portNumber) ,2);
+
         ServerSocket serverSocket = new ServerSocket(portNumber);
         while (true){
             System.out.println("I am listening .... ");
@@ -89,7 +89,7 @@ public class Server {
                     lsmTree.put(key,value);
                     System.out.println("Key : "+key);
                     System.out.println("Value : "+value);
-
+                    System.out.println(lsmTree.memTable.toString());
                     sendStringToSocket(clientSocket,"Set Successful");
                 }
             }else if(request.substring(0,3).equals("get")){
