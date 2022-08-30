@@ -33,6 +33,7 @@ public class Server {
         System.out.println(" ----- Received from Server : " +message);
         return message;
     }
+
     static void sendStringToSocket(Socket socket, String message) throws IOException {
         OutputStream outputStream = socket.getOutputStream();
         // create a data output stream from the output stream so we can send data through it

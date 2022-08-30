@@ -36,6 +36,7 @@ public class LSMTree {
         this.bloomFilter = BloomFilter.create(Funnels.stringFunnel(Charsets.UTF_16), 100, 0.01);
         segmentIDs= new ArrayList<>();
         this.versionNumber=0;
+        this.rowCache= new HashMap<>();
     }
 /**
  * There are some steps that we should do to mange get requests in our app assuming one replica 'that will be repeated for each replica'
