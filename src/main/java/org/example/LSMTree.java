@@ -223,14 +223,17 @@ public class LSMTree {
             memTable.clear();
         }
     }
-    void commitLogs(String key,String value){
+    void commitLogs(String key,String value) throws IOException {
         String diskReplicaPath= "./Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
-        String path = diskReplicaPath+nextSegmentID+".txt";
-        File myObj = new File(path);
+        String path = diskReplicaPath+"commitLog"+".txt";
+        File file = new File("."+File.separator+diskReplicaPath);
+        if (!file.exists()) {
+            file.mkdirs();
+        }
+        FileWriter fileWriter = new FileWriter(path,true);
         try {
-            FileWriter myWriter = new FileWriter(myObj,true);
-            myWriter.write(key+","+value+'\n');
-            myWriter.close();
+            fileWriter.write(key+","+value+'\n');
+            fileWriter.close();
             System.out.println("Successfully wrote to the file.");
         } catch (IOException e) {
             System.out.println("An error occurred.");

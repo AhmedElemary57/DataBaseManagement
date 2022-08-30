@@ -14,11 +14,8 @@ public class Admin {
         Thread buildServer =new Thread(new Runnable() {
             @Override
             public void run() {
-                try {
-                     new Server().main(new String[]{"1", "5", "100"});
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+
+
             }
         }
         );

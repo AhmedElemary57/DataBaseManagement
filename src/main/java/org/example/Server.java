@@ -6,7 +6,8 @@ import java.net.*;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;;
+import java.util.Map;;import static java.lang.Thread.sleep;
+
 public class Server {
     static RingStructure ringStructure;
     static String currentValue;
@@ -57,7 +58,7 @@ public class Server {
         }
         return false;
     }
-    private static void writeToOtherReplicas(int currentPortNumber,int replicaId, String key, String value, int writeQuorum) {
+    static void writeToOtherReplicas(int currentPortNumber, int replicaId, String key, String value, int writeQuorum) {
         System.out.println("writeToOtherReplicas");
         List<Integer> replicasPosition = ringStructure.nodesReplicasMapping.getPositionReplicasOfNode(replicaId);
         replicasPosition.remove(new Integer(currentPortNumber));
@@ -74,15 +75,13 @@ public class Server {
             }
         }
         for (int replicaPosition : replicasPositionToWrite) {
-            try {
-                startSendingRequestToOtherServer(replicaPosition, "*set("+key+","+value+")",false);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            WriteQuorumThread writeQuorumThread = new WriteQuorumThread(replicaPosition, key, value);
+            writeQuorumThread.start();
+
         }
 
     }
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         // ServerSocket serverSocket2 = new ServerSocket(5888);
 
        // ServerSocket serverSocket = new ServerSocket(4747);
@@ -139,6 +138,7 @@ public class Server {
                         if (lsmTree.getReplicaId()==neededPortNumber){
                             lsmTree.commitLogs(key,value);
                             sendStringToSocket(clientSocket,"Set Successful");
+                            Thread.sleep(1000);
                             lsmTree.put(key,value);
                             System.out.println("The key "+key+" and value "+value+" is set in the LSMTree "+lsmTree.getReplicaId());
                             // case first write to avoid infinite loop so we can use flag to know if we have written to the other replicas or not
