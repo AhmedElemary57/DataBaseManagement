@@ -13,13 +13,18 @@ public class RingStructure {
  *     Use the value of nodes_Ports map as a key in the replicas map to get the replicas ports and then appends it to the List
  * */
     int numberOfNodes, numberOfVirtualNodes, replicationFactor;
-    Map<Integer,List<Integer>> nodes_Ports = new HashMap<>();
+    Map<Integer,Integer> nodes_Ports = new HashMap<>();
+    NodesReplicasMapping nodesReplicasMapping;
 
     private volatile static RingStructure uniqueInstance;
     private RingStructure(int numberOfNodes, int numberOfVirtualNodes, int replicationFactor) {
         this.numberOfNodes=numberOfNodes;
         this.numberOfVirtualNodes=numberOfVirtualNodes;
         this.replicationFactor=replicationFactor;
+        nodesReplicasMapping = new NodesReplicasMapping(replicationFactor, numberOfNodes, 5001);
+
+        nodesReplicasMapping.distributeReplicas();
+        nodesReplicasMapping.generateNodeWhichReplicaBelongToNode();
 
     }
     public static RingStructure getInstance(int numberOfNodes, int numberOfVirtualNodes, int replicationFactor) {
@@ -64,23 +69,25 @@ public class RingStructure {
                 String string = Integer.toString(amp).concat(Integer.toString(portNumber*7979));
                 int hashed = MurmurHash3.hash32x86(string.getBytes());
                 keys.add(hashed);
-                List<Integer> replicas = getReplicas(portNumber);
-                nodes_Ports.put(hashed,replicas);
+                nodes_Ports.put(hashed,portNumber);
             }
         }
         Collections.sort(keys);
     }
     void addNode(int number){
-
-    }
-    List<Integer> getReplicas(int currentPortNumber) {
-        int index = currentPortNumber- 5000;
-        List<Integer> replicas = new ArrayList<>();
-        for (int i = 0; i < replicationFactor; i++) {
-            replicas.add(5000+index);
-            index = (index + 1) % numberOfNodes;
+        for (int j = 0; j < numberOfVirtualNodes; j++) {
+            int amp = 87187*numberOfNodes;
+            numberOfNodes++;
+            int portNumber = 5000 + numberOfNodes;
+            String string = Integer.toString(amp).concat(Integer.toString(portNumber*7979));
+            int hashed = MurmurHash3.hash32x86(string.getBytes());
+            keys.add(hashed);
+            nodes_Ports.put(hashed,portNumber);
         }
-        return replicas;
+        Collections.sort(keys);
+        nodesReplicasMapping.addNode();
+        //Here we should stop the modified section in the ring structure and move the data from one node to the other
+
     }
 
     public static void main(String[] args) {

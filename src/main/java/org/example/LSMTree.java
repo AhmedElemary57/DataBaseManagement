@@ -2,12 +2,8 @@ package org.example;
 import com.google.common.base.Charsets;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
-import java.io.BufferedReader;
+
 import java.util.*;
-import java.util.function.Predicate;
-import com.google.common.base.Charsets;
-import com.google.common.hash.BloomFilter;
-import com.google.common.hash.Funnels;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -15,24 +11,61 @@ import java.util.HashMap;
 
 import java.util.List;
 import java.util.Map;
+
+import static java.lang.Thread.sleep;
+
 public class LSMTree {
-    String serverName,memTableID,nextSegmentID;
+    Integer nodeNumber,replicaId,nextSegmentID;
     int maxMemeTableSize, memTableSize,segmentNumber,versionNumber;
+
+    public Integer getNodeNumber() {
+        return nodeNumber;
+    }
+
+    public void setNodeNumber(Integer nodeNumber) {
+        this.nodeNumber = nodeNumber;
+    }
+
+    public Integer getReplicaId() {
+        return replicaId;
+    }
+
+    public void setReplicaId(Integer replicaId) {
+        this.replicaId = replicaId;
+    }
+
+    public int getMaxMemeTableSize() {
+        return maxMemeTableSize;
+    }
+
+    public void setMaxMemeTableSize(int maxMemeTableSize) {
+        this.maxMemeTableSize = maxMemeTableSize;
+    }
+
+    public int getMemTableSize() {
+        return memTableSize;
+    }
+
+    public void setMemTableSize(int memTableSize) {
+        this.memTableSize = memTableSize;
+    }
+
     List<Integer> segmentIDs;
     RedBlackTree<String> memTable;
     Map<String,String> rowCache;
     BloomFilter<String> bloomFilter ;
-    public LSMTree(String serverName, String memTableID, int maxMemeTableSize) {
-        this.serverName = serverName;
-        this.memTableID = memTableID;
+    public LSMTree(Integer serverName, Integer memTableID, int maxMemeTableSize) {
+        this.nodeNumber = serverName;
+        this.replicaId = memTableID;
         this.maxMemeTableSize = maxMemeTableSize;
         this.memTable = new RedBlackTree<>();
         this.segmentNumber=0;
-        this.nextSegmentID=String.valueOf(segmentNumber);
+        this.nextSegmentID=segmentNumber;
         this.rowCache = new HashMap<>();
         this.bloomFilter = BloomFilter.create(Funnels.stringFunnel(Charsets.UTF_16), 100, 0.01);
         segmentIDs= new ArrayList<>();
         this.versionNumber=0;
+        this.rowCache= new HashMap<>();
     }
 /**
  * There are some steps that we should do to mange get requests in our app assuming one replica 'that will be repeated for each replica'
@@ -82,9 +115,9 @@ public class LSMTree {
         }
     }
     void commitLogs(String key,String value){
-        File myObj = new File(serverName+".txt");
+        File myObj = new File(nodeNumber +".txt");
         try {
-            FileWriter myWriter = new FileWriter(serverName+".txt",true);
+            FileWriter myWriter = new FileWriter(nodeNumber +".txt",true);
             myWriter.write(key+","+value+'\n');
             myWriter.close();
             System.out.println("Successfully wrote to the file.");
@@ -97,9 +130,9 @@ public class LSMTree {
     void flushToDisk() throws IOException {
         //flush to disk
         //write the memtable to disk in a json file
-        String diskReplicaPath= "./Node_Number"+serverName+"/ReplicaOf"+memTableID+"/data/";
+        String diskReplicaPath= "./Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/data/";
         segmentNumber++;
-        nextSegmentID=String.valueOf(segmentNumber);
+        nextSegmentID=segmentNumber;
         String path = nextSegmentID+".txt";
 
         //write to disk
@@ -116,6 +149,7 @@ public class LSMTree {
         fileWriter.close();
 
     }
+
     //string binary search
     String searchKeyInSegment(String key,String[] segmentData) throws IOException {
         int low = 0;
@@ -140,7 +174,7 @@ public class LSMTree {
 
         //get the value from the SSTable
         //get the path of the SSTable
-        String diskReplicaPath= "./Node_Number"+serverName+"/ReplicaOf"+memTableID+"/data/";
+        String diskReplicaPath= "./Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/data/";
         String path = String.valueOf(segmentIDs.get(fromSegment-1))+".txt";
         //read the file
         File file = new File(diskReplicaPath+path);
@@ -161,7 +195,7 @@ public class LSMTree {
         return getValueFromSSTable(key,fromSegment-1);
     }
     public static void main(String[] args) throws IOException {
-        LSMTree lsmTree = new LSMTree("5075","4785",5);
+        LSMTree lsmTree = new LSMTree(5007,788,5);
         lsmTree.put("1","a");
         lsmTree.put("2","2");
         lsmTree.put("2","3");

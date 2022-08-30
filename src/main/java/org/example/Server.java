@@ -3,13 +3,15 @@ package org.example;
 import org.apache.commons.codec.digest.MurmurHash3;
 
 import java.net.*;
-import java.io.*;;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;;
 public class Server {
-
-    static LSMTree lsmTree = new LSMTree("serverName", "replica",10);
+    static RingStructure ringStructure;
     static String currentValue;
 
-    public static String startSendingRequestToOtherServer(int portNumber, String request) throws IOException {
+    public static String startSendingRequestToOtherServer(int portNumber, String request,boolean waitAnswer) throws IOException {
         //I think there is a problem here a should destroy the socket after using if
 
         System.out.println("make socket to port number "+ portNumber);
@@ -18,11 +20,12 @@ public class Server {
         // How to pass a parameter to a new thread ???
         sendStringToSocket(serverSocket,request);
         System.out.println("Message sent to the client");
-
-        String response = getInputFromSocket(serverSocket);
-        System.out.println(" ----- Received from Server : " +response);
-
-        return response;
+        if(waitAnswer) {
+            String response = getInputFromSocket(serverSocket);
+            System.out.println(" ----- Received from Server : " + response);
+            return response;
+        }
+        return null;
     }
     static String getInputFromSocket(Socket socket) throws IOException {
         InputStream inputStream = socket.getInputStream();
@@ -41,8 +44,44 @@ public class Server {
         dataOutputStream.writeUTF(message);
         dataOutputStream.flush(); // send the message
     }
+    /**
+     * Search the location of the needed port in the other nodes so we can know if it is available or not in current node
+     *
+     * */
+    private static boolean isKeyInOneOfTheReplicas(int neededPortNumber, int portNumber) {
+        List<Integer> replicas = ringStructure.nodesReplicasMapping.whichReplicasBelongToNode.get(portNumber);
+        for (int replica : replicas) {
+            if (replica == neededPortNumber) {
+                return true;
+            }
+        }
+        return false;
+    }
+    private static void writeToOtherReplicas(int currentPortNumber,int replicaId, String key, String value, int writeQuorum) {
+        System.out.println("writeToOtherReplicas");
+        List<Integer> replicasPosition = ringStructure.nodesReplicasMapping.getPositionReplicasOfNode(replicaId);
+        replicasPosition.remove(new Integer(currentPortNumber));
+        //chose a tow different replicas from replicasPosition
+        List<Integer> replicasPositionToWrite = new ArrayList<>();
+        for (int i = 0; i < writeQuorum; i++) {
+            int randomPosition = (int) (Math.random() * replicasPosition.size());
+            if ( (!replicasPositionToWrite.contains(replicasPosition.get(randomPosition)) && !replicasPosition.get(randomPosition).equals(currentPortNumber))) {
+                replicasPositionToWrite.add(replicasPosition.get(randomPosition));
+                replicasPosition.remove(new Integer(randomPosition));
+            }else {
+                System.out.println("randomPosition is Not valid");
+                i--;
+            }
+        }
+        for (int replicaPosition : replicasPositionToWrite) {
+            try {
+                startSendingRequestToOtherServer(replicaPosition, "*set("+key+","+value+")",false);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
-
+    }
     public static void main(String[] args) throws IOException {
         // ServerSocket serverSocket2 = new ServerSocket(5888);
 
@@ -50,21 +89,32 @@ public class Server {
         int numberOfNodes=Integer.valueOf(args[1]);
         System.out.println("Number Of nodes : "+numberOfNodes);
         int nodeNumber=Integer.valueOf(args[0]);
-        int numberOfVirtualNodes=Integer.valueOf(args[2]),replicationFactor=3;
-        RingStructure ringStructure= RingStructure.getInstance(numberOfNodes,numberOfVirtualNodes, replicationFactor);
+        int numberOfVirtualNodes=Integer.valueOf(args[2]), replicationFactor=Integer.valueOf(args[3]);
+        ringStructure= RingStructure.getInstance(numberOfNodes,numberOfVirtualNodes, replicationFactor);
         ringStructure.buildMap(10);
-
+        ringStructure.nodesReplicasMapping.printWhichReplicasBelongToNode();
         System.out.println(".^^^^^ Node number : "+args[0]);
 
         //Here we will start listening to any one who wants to connect to the server
         int portNumber=5000+nodeNumber;
+        List<LSMTree> lsmTrees = new ArrayList<LSMTree>();
+        Map<Integer,List<Integer>> nodeReplicas= ringStructure.nodesReplicasMapping.whichReplicasBelongToNode;
+        for (int i=0;i<replicationFactor;i++){
+            lsmTrees.add( new LSMTree(nodeNumber,nodeReplicas.get(portNumber).get(i),2) );
+        }
+
         ServerSocket serverSocket = new ServerSocket(portNumber);
+
         while (true){
             System.out.println("I am listening .... ");
+            boolean serverRequest=false;
             Socket clientSocket = serverSocket.accept();
             String request = getInputFromSocket(clientSocket);
             System.out.println("Received request from client : " + request);
-
+            if(request.charAt(0)=='*'){
+                request=request.substring(1);
+                serverRequest=true;
+            }
             if(request.substring(0,3).equals("set")){
                 String data =request.substring(4,request.length()-1);
                 String key = data.split(",")[0];
@@ -75,21 +125,30 @@ public class Server {
 
                 int nodeIndexOnRing=ringStructure.find_Node(hashCode);
                 System.out.println("Set index in correspond Node : "+ nodeIndexOnRing);
-                int neededPortNumber= ringStructure.nodes_Ports.get(nodeIndexOnRing).get(0);
+                int neededPortNumber= ringStructure.nodes_Ports.get(nodeIndexOnRing);
 
                 System.out.println("Correct Node Port : ------->" + neededPortNumber);
                 System.out.println("neededPortNumber is " + neededPortNumber +"  #######  " +"This Port is  "+portNumber);
-                if (neededPortNumber != portNumber){
+
+                if (!isKeyInOneOfTheReplicas(neededPortNumber,portNumber) ){
                     //setRequestToOtherServer(neededPortNumber,request);
-                    startSendingRequestToOtherServer(neededPortNumber,request);
+                    startSendingRequestToOtherServer(neededPortNumber,request,true);
                     sendStringToSocket(clientSocket,"Set Successful");
                 }else {
-                    System.out.println("Set Successful");
-                    lsmTree.put(key,value);
-                    System.out.println("Key : "+key);
-                    System.out.println("Value : "+value);
-
-                    sendStringToSocket(clientSocket,"Set Successful");
+                    for (LSMTree lsmTree : lsmTrees) {
+                        if (lsmTree.getReplicaId()==neededPortNumber){
+                            lsmTree.commitLogs(key,value);
+                            sendStringToSocket(clientSocket,"Set Successful");
+                            lsmTree.put(key,value);
+                            System.out.println("The key "+key+" and value "+value+" is set in the LSMTree "+lsmTree.getReplicaId());
+                            // case first write to avoid infinite loop so we can use flag to know if we have written to the other replicas or not
+                            if (!serverRequest){
+                                writeToOtherReplicas(portNumber,neededPortNumber,key,value,2);
+                            }
+                            sendStringToSocket(clientSocket,"Set Successful To all quorum requested");
+                            break;
+                        }
+                    }
                 }
             }else if(request.substring(0,3).equals("get")){
 
@@ -99,17 +158,17 @@ public class Server {
                 System.out.println("Hash Code is : "+hashCode);
                 int nodeIndexOnRing=ringStructure.find_Node(hashCode);
                 System.out.println("Get index in correspond Node : "+ nodeIndexOnRing);
-                int neededPortNumber= ringStructure.nodes_Ports.get(nodeIndexOnRing).get(0);
+                int neededPortNumber= ringStructure.nodes_Ports.get(nodeIndexOnRing);
                 System.out.println("Correct Node Port : ------->" + neededPortNumber);
                 System.out.println("neededPortNumber is " + neededPortNumber +"  #######  " +"This Port is  "+portNumber);
                 if (neededPortNumber != portNumber){
 
                     //getRequestToOtherServer(neededPortNumber,request);
-                    currentValue = startSendingRequestToOtherServer(neededPortNumber,request);
+                    currentValue = startSendingRequestToOtherServer(neededPortNumber,request,true);
                     sendStringToSocket(clientSocket,currentValue);
 
                 }else {
-                    currentValue = lsmTree.getValueOf(key);
+          //          currentValue = lsmTree.getValueOf(key);
                     System.out.println("Get Successful");
                     sendStringToSocket(clientSocket,currentValue);
                 }
@@ -118,6 +177,8 @@ public class Server {
         }
 
     }
+
+
 
 
 }
