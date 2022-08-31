@@ -199,12 +199,12 @@ public class LSMTree {
         String value = memTable.search(key);
         if (memTable.search(key)!=null){
             return value;
-        }else {
+        } else {
             //Ask bloom filter if it is present
             if (bloomFilter.mightContain(key)){
                 //If not so we will check our SSTable from newer to oldest to get the value.
                 return getValueFromSSTable(key,segmentIDs.size());
-            }else {
+            } else {
                 return null;
             }
 

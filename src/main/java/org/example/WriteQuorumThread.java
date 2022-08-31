@@ -1,8 +1,6 @@
 package org.example;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class WriteQuorumThread extends Thread{
 
@@ -20,7 +18,8 @@ public class WriteQuorumThread extends Thread{
     @Override
     public void run() {
         try {
-            Server.startSendingRequestToOtherServer(replicaPosition, "*set("+key+","+value+")",false);
+            //77
+            Server.sendToPort(replicaPosition, "*set("+key+","+value+")",false);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

@@ -37,7 +37,8 @@ public class NodesReplicasMapping {
         }
     }
     public List<Integer> getPositionReplicasOfNode(int nodeID){
-        return nodeReplicasPositionMapping.get(nodeID);
+        List<Integer> copy = new ArrayList<>(nodeReplicasPositionMapping.get(nodeID));
+        return copy;
     }
 
     public int getReplicationFactor(){
