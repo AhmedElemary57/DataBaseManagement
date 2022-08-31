@@ -1,7 +1,6 @@
 package org.example;
 
 import org.apache.commons.codec.digest.MurmurHash3;
-
 import java.net.*;
 import java.io.*;
 import java.util.*;
@@ -33,17 +32,20 @@ public class Server {
         }
         return null;
     }
+
     static String getInputFromSocket(Socket socket) throws IOException {
         InputStream inputStream = socket.getInputStream();
         DataInputStream dataInputStream = new DataInputStream(inputStream);
         return dataInputStream.readUTF();
     }
+
     static void sendStringToSocket(Socket socket, String message) throws IOException {
         OutputStream outputStream = socket.getOutputStream();
         DataOutputStream dataOutputStream = new DataOutputStream(outputStream);
         dataOutputStream.writeUTF(message);
         dataOutputStream.flush();
     }
+
     /**
      * @param list: List to choose from it unique random values.
      * @param k:    K unique numbers.
@@ -51,8 +53,12 @@ public class Server {
      */
     static List<Integer> randomFromList(List<Integer> list, int k) {
         List<Integer> result = new ArrayList<>();
+        Random rn = new Random();
+
+        System.out.println(" List size == " + list.size());
+        System.out.println(" K == " + k);
+
         for (int i = 0; i < k; i++) {
-            Random rn = new Random();
             int randomPosition = rn.nextInt(list.size());
             result.add(list.get(randomPosition));
             list.remove(randomPosition);
@@ -111,16 +117,98 @@ public class Server {
     }
 
     static void writeToOtherReplicas(int currentPortNumber, int replicaId, String key, String value, int writeQuorum) {
-        System.out.println("writeToOtherReplicas");
+        System.out.println("Writing To Other Replicas...");
         List<Integer> replicasPosition = ringStructure.nodesReplicasMapping.getPositionReplicasOfNode(replicaId);
         replicasPosition.remove(Integer.valueOf(currentPortNumber));
+
+        System.out.println("replicasPosition = " + replicasPosition.size());
+
         List<Integer> replicasPositionToWrite = randomFromList(replicasPosition, writeQuorum);
         for (int replicaPosition : replicasPositionToWrite) {
             WriteQuorumThread writeQuorumThread = new WriteQuorumThread(replicaPosition, key, value);
             writeQuorumThread.start();
         }
-
     }
+
+    static void set(String request, int portNumber, Socket sender, List<LSMTree> lsmTrees, boolean queryWithoutQuorom, int writeQuorum) throws IOException {
+        // Praising Request.
+        String data = request.substring(4, request.length() - 1);
+        String key = data.split(",")[0];
+        String value = data.split(",")[1];
+
+        // Hash the key.
+        int hashCode = MurmurHash3.hash32x86(key.getBytes());
+        System.out.println("Hash Code is : " + hashCode);
+
+        // Get the virtual node and its main partitionID (port number).
+        int vnIndex = ringStructure.find_Node(hashCode);
+        System.out.println("Virtual Node Index = " + vnIndex);
+        int neededPortNumber = ringStructure.nodes_Ports.get(vnIndex);
+        System.out.println("Correct Node Port : ------->" + neededPortNumber);
+        System.out.println("neededPortNumber is " + neededPortNumber + "  #######  " + "This Port is  " + portNumber);
+
+        // Check if current node has a replica.
+        if (!hasReplica(neededPortNumber, portNumber)) {
+            System.out.println("I am not in the correct node");
+            int portDestination = getPositionOfTheReplica(neededPortNumber);
+            sendToPort(portDestination, request, true);
+            sendStringToSocket(sender, "Set Successful");
+        } else { // Current Node has a replica.
+            for (LSMTree lsmTree : lsmTrees) { // Find the right partition.
+                if (lsmTree.getReplicaId() == neededPortNumber) {
+                    // commit and end request.
+                    lsmTree.commitLogs(key, value);
+                    sendStringToSocket(sender, "Set Successful");
+
+                    lsmTree.put(key, value);
+                    System.out.println("The key " + key + " and value " + value + " is set in the LSMTree " + lsmTree.getReplicaId());
+                    // case first write to avoid infinite loop so we can use flag to know if we have written to the other replicas or not
+                    if (!queryWithoutQuorom) { // client request
+                        writeToOtherReplicas(portNumber, neededPortNumber, key, value, writeQuorum);
+                    }
+                    sendStringToSocket(sender, "Set Successful To all quorum requested");
+                    break;
+                }
+            }
+        }
+    }
+
+    static void get(String request, int portNumber, Socket sender, List<LSMTree> lsmTrees, boolean serverRequest, int writeQuorum) throws IOException, InterruptedException {
+        String data = request.substring(4, request.length() - 1);
+        String key = data.split(",")[0];
+        int hashCode = MurmurHash3.hash32x86(key.getBytes());
+        System.out.println("Hash Code is : " + hashCode);
+        int nodeIndexOnRing = ringStructure.find_Node(hashCode);
+        System.out.println("Get index in correspond Node : " + nodeIndexOnRing);
+        int neededPortNumber = ringStructure.nodes_Ports.get(nodeIndexOnRing);
+        System.out.println("Correct Node Port : ------->" + neededPortNumber);
+        System.out.println("neededPortNumber is " + neededPortNumber + "  #######  " + "This Port is  " + portNumber);
+
+        if (hasReplica(neededPortNumber, portNumber)) {
+            System.out.println("I am not in the correct node");
+            int portDestination = getPositionOfTheReplica(neededPortNumber);
+            sendToPort(portDestination, request, true);
+            sendStringToSocket(sender, currentValue);
+        } else {
+            for (LSMTree lsmTree : lsmTrees) {
+                if (lsmTree.getReplicaId() == neededPortNumber) {
+                    // ask the server to get the value from other nodes
+                    if (!serverRequest) {
+                        currentValue = getValueReadQuorum(neededPortNumber, portNumber, key, writeQuorum);
+                    } else {
+                        currentValue = lsmTree.getValueOf(key);
+                        if (currentValue == null) {
+                            currentValue = "Error 404 Not Found";
+                        }
+                    }
+                    sendStringToSocket(sender, currentValue);
+                    System.out.println("The key " + key + " and value " + currentValue + " is set in the LSMTree " + lsmTree.getReplicaId());
+                    break;
+                }
+            }
+        }
+    }
+
     public static void main(String[] args) throws IOException, InterruptedException {
         // Server configurations
         int nodeNumber = Integer.parseInt(args[0]);
