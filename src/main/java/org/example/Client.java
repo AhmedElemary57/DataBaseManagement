@@ -1,98 +1,72 @@
 package org.example;
 
 import java.io.*;
+import java.lang.reflect.Type;
+import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Random;
 import java.util.Scanner;
-
+import java.net.InetSocketAddress;
 public class Client {
+    static final int START_PORT = 5000;
 
     int portNumber;
-
-    public Client(int portNumber) {
+    int numberOfNodes;
+    RingStructure ringStructure;
+    public Client(int portNumber,int numberOfNodes) {
         this.portNumber = portNumber;
+        this.numberOfNodes = numberOfNodes;
+        int numberOfVirtualNodes = 20;
+        int replicationFactor = 3;
+        ringStructure = RingStructure.getInstance(numberOfNodes,numberOfVirtualNodes,replicationFactor);
+        System.out.println("Client started and was done by Thread number "+Thread.currentThread().getId());
+
     }
-
-    String setRequest(String key, String value) throws IOException {
-         int numberOfNodes=5;
-         Random rand = new Random();
-         int randomConnectToNode = rand.nextInt(numberOfNodes)+1;
-         Socket socket = new Socket("localhost", 5000 + randomConnectToNode);
-         OutputStream outputStream = socket.getOutputStream();
-         // create a data output stream from the output stream so we can send data through it
-         DataOutputStream dataOutputStream = new DataOutputStream(outputStream);
-         String input = "set(" + key + "," + value + ")";
-         dataOutputStream.writeUTF(input);
-         dataOutputStream.flush(); // send the message
-
-         InputStream inputStream = socket.getInputStream();
-         // create a DataInputStream so we can read data from it.
-         DataInputStream dataInputStream = new DataInputStream(inputStream);
-         // read the message from the socket
-         String message = dataInputStream.readUTF();
-         System.out.println("Received from server: " +message);
-         return message;
-     }
-     String getRequest(String key) throws IOException {
-            int numberOfNodes=5;
-            Random rand = new Random();
-            int randomConnectToNode = rand.nextInt(numberOfNodes)+1;
-            Socket socket = new Socket("localhost", 5000 + randomConnectToNode);
-            OutputStream outputStream = socket.getOutputStream();
-            // create a data output stream from the output stream so we can send data through it
-            DataOutputStream dataOutputStream = new DataOutputStream(outputStream);
-            String input = "get(" + key + ")";
-
-            dataOutputStream.writeUTF(input);
-
-            dataOutputStream.flush(); // send the message
-            InputStream inputStream = socket.getInputStream();
-
-            // create a DataInputStream so we can read data from it.
-            DataInputStream dataInputStream = new DataInputStream(inputStream);
-            // read the message from the socket
-            String message = dataInputStream.readUTF();
-            System.out.println("Received from server: " +message);
-            return message;
-
-     }
-
-    public static void main(String[] args) throws IOException {
-
-        int numberOfNodes=5;
+    void addedNode(){
+        ringStructure.addNode();
+    }
+    public String sendToPort(String input, Socket socket) throws IOException {
+        OutputStream outputStream = socket.getOutputStream();
+        DataOutputStream dataOutputStream = new DataOutputStream(outputStream);
+        dataOutputStream.writeUTF(input);
+        dataOutputStream.flush();
+        InputStream inputStream = socket.getInputStream();
+        DataInputStream dataInputStream = new DataInputStream(inputStream);
+        String message = dataInputStream.readUTF();
+        System.out.println("Received from server: " +message);
+        return message;
+    }
+    int isAnyPortAvailable(int numberOfPorts){
+        int i=0;
         Random rand = new Random();
-
-        while(true) {
-
-            int randomConnectToNode = rand.nextInt(numberOfNodes)+1;
-
-            Socket s = new Socket("localhost", 5000 + randomConnectToNode);
-
-            System.out.println("------------------------------------------------------------------------- ");
-            OutputStream outputStream = s.getOutputStream();
-            // create a data output stream from the output stream so we can send data through it
-            DataOutputStream dataOutputStream = new DataOutputStream(outputStream);
-
-            System.out.println("Sending string to the ServerSocket");
-
-            Scanner scanner = new Scanner(System.in);
-            String input = scanner.nextLine();
-
-            // write the message we want to send
-            dataOutputStream.writeUTF(input);
-            dataOutputStream.flush(); // send the message
-
-            InputStream inputStream = s.getInputStream();
-            // create a DataInputStream so we can read data from it.
-            DataInputStream dataInputStream = new DataInputStream(inputStream);
-            // read the message from the socket
-            String message = dataInputStream.readUTF();
-
-            System.out.println("Received from server: " +message);
-
-        }
+        int randomConnectToNode = rand.nextInt(numberOfPorts)+1;
+        return randomConnectToNode+START_PORT;
     }
+
+    String sendRequest(String key, String value,boolean isSetRequest ) throws IOException {
+        String input;
+        if (isSetRequest){
+            input = "set(" + key + "," + value + ")";
+        }
+        else{
+            input = "get(" + key + ")";
+        }
+        System.out.println("Client sent: " + input);
+        int serverPortNumber= isAnyPortAvailable(numberOfNodes);
+
+        try (Socket socket = new Socket("localhost", serverPortNumber)) {
+            System.out.println("Client received: " + "Server port number is " + serverPortNumber);
+            String answer= sendToPort(input, socket);
+            System.out.println("Client received: " + answer);
+            return answer;
+        }catch (IOException socket){
+            System.out.println("Client received: " + "Server port number is " + serverPortNumber);
+            System.out.println("Client received: " + "Server is not available");
+            return "Server is not available";
+        }
+
+         }
 
 
 }

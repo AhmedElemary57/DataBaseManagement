@@ -5,6 +5,8 @@ import java.net.*;
 import java.io.*;
 import java.util.*;
 
+import static org.example.Client.START_PORT;
+
 
 public class Server {
     static RingStructure ringStructure;
@@ -19,18 +21,20 @@ public class Server {
     public static String sendToPort(int portNumber, String request, boolean waitAnswer) throws IOException {
         // Socket initialized
         System.out.println("Make socket to port number " + portNumber);
-        Socket serverSocket = new Socket("localhost", portNumber);
+        try ( Socket serverSocket = new Socket("localhost", portNumber)){
+            sendStringToSocket(serverSocket, request);
+            System.out.println("Message sent to port number " + portNumber);
 
-        // Send request
-        sendStringToSocket(serverSocket, request);
-        System.out.println("Message sent to port number " + portNumber);
-
-        if (waitAnswer) {
-            String response = getInputFromSocket(serverSocket);
-            System.out.println(" ----- Received from Server : " + response);
-            return response;
+            if (waitAnswer) {
+                String response = getInputFromSocket(serverSocket);
+                System.out.println(" ----- Received from Server : " + response);
+                return response;
+            }
+            return null;
+        }catch (IOException e) {
+            System.out.println("Error in sending to port number " + portNumber);
+            return "Error 404 Not Found";
         }
-        return null;
     }
 
     static String getInputFromSocket(Socket socket) throws IOException {
@@ -45,7 +49,6 @@ public class Server {
         dataOutputStream.writeUTF(message);
         dataOutputStream.flush();
     }
-
     /**
      * @param list: List to choose from it unique random values.
      * @param k:    K unique numbers.
@@ -66,35 +69,6 @@ public class Server {
         return result;
     }
 
-    static String getValueReadQuorum(int neededPortNumber, int currentPortNumber, String key, int quorumRead) throws InterruptedException {
-        System.out.println("Reading From Other Replicas...");
-        List<Integer> dataPorts = ringStructure.nodesReplicasMapping.getPositionReplicasOfNode(neededPortNumber);
-        dataPorts.remove(Integer.valueOf(currentPortNumber));
-
-        List<Integer> chosenReplicas = randomFromList(dataPorts, quorumRead);
-
-        List<ReadQuorumThread> readQuorum = new ArrayList<>();
-        List<Thread> threads = new ArrayList<>();
-
-        for (int i = 0; i < chosenReplicas.size(); i++) {
-            readQuorum.add(new ReadQuorumThread(chosenReplicas.get(i), key));
-            threads.add(new Thread(readQuorum.get(i)));
-            threads.get(i).start();
-        }
-        for (Thread thread : threads) {
-            thread.join();
-        }
-        List<String> values = new ArrayList<>();
-        List<String> versions = new ArrayList<>();
-        // All threads ended
-        for (ReadQuorumThread x : readQuorum) {
-            values.add(x.getValue());
-            versions.add(x.getVersion());
-        }
-        String max = Collections.max(versions);
-        System.out.println("Max version : " + max + " for key " + key+ " Value : " + values.get(versions.indexOf(max)));
-        return values.get(versions.indexOf(max));
-    }
 
     /**
      * checks if current node has the desired partition.
@@ -116,21 +90,72 @@ public class Server {
         return replicas.get(randomReplica);
     }
 
-    static void writeToOtherReplicas(int currentPortNumber, int replicaId, String key, String value, int writeQuorum) {
-        System.out.println("Writing To Other Replicas...");
-        List<Integer> replicasPosition = ringStructure.nodesReplicasMapping.getPositionReplicasOfNode(replicaId);
-        replicasPosition.remove(Integer.valueOf(currentPortNumber));
 
+    static List<String> sendRequestToAllReplicas(int neededReplicaId, int currentPortNumber, String request) throws IOException, InterruptedException {
+        List<Integer> replicasPosition = ringStructure.nodesReplicasMapping.getPositionReplicasOfNode(neededReplicaId);
         System.out.println("replicasPosition = " + replicasPosition.size());
+        List<String> responses = new ArrayList<>();
 
-        List<Integer> replicasPositionToWrite = randomFromList(replicasPosition, writeQuorum);
-        for (int replicaPosition : replicasPositionToWrite) {
-            WriteQuorumThread writeQuorumThread = new WriteQuorumThread(replicaPosition, key, value);
-            writeQuorumThread.start();
+
+        if (replicasPosition.contains(Integer.valueOf(currentPortNumber))){
+            replicasPosition.remove(Integer.valueOf(currentPortNumber));
+            responses.add("Set Successful");
         }
-    }
+        //TODO do not know if we should do concurrency here ?? or not
+        List<MultiRequestSend> multiRequestSends = new ArrayList<>();
+        List<Thread> threads = new ArrayList<>();
+        for (int i = 0; i < replicasPosition.size(); i++) {
+            multiRequestSends.add(new MultiRequestSend(replicasPosition.get(i), request));
+            threads.add(new Thread(multiRequestSends.get(i)));
+            threads.get(i).start();
+        }
+        System.out.println("Thread joined waiting for response");
+        for (Thread thread : threads) {
+            thread.join();
+        }
+        // All threads ended
+        for (MultiRequestSend x : multiRequestSends) {
+            responses.add(x.getResponse());
+        }
+        System.out.println("responses number = " + responses.size());
+        return responses;
 
-    static void set(String request, int portNumber, Socket sender, List<LSMTree> lsmTrees, boolean queryWithoutQuorom, int writeQuorum) throws IOException {
+    }
+    static String getValueReadWriteQuorum(int neededPortNumber, int currentPortNumber, String request, int quorumReadWrite) throws InterruptedException, IOException {
+        List<String> responses = sendRequestToAllReplicas(neededPortNumber, currentPortNumber, request);
+        Map<String, Integer> responsesCount = new HashMap<>();
+
+        for (String response : responses) {
+            if (responsesCount.containsKey(response) ){
+                responsesCount.put(response, responsesCount.get(response) + 1);
+            } else {
+                responsesCount.put(response, 1);
+            }
+        }
+        for (String key : responsesCount.keySet()) {
+
+            if (responsesCount.get(key) >= quorumReadWrite){
+
+                return key;
+            }
+        }
+        // Get the most frequent response
+        return "Error 404 Not Found";
+    }
+//    static void writeToOtherReplicas(int currentPortNumber, int replicaId, String key, String value, int writeQuorum) {
+//        System.out.println("Writing To Other Replicas...");
+//        List<Integer> replicasPosition = ringStructure.nodesReplicasMapping.getPositionReplicasOfNode(replicaId);
+//        replicasPosition.remove(Integer.valueOf(currentPortNumber));
+//
+//        System.out.println("replicasPosition = " + replicasPosition.size());
+//
+//        List<Integer> replicasPositionToWrite = randomFromList(replicasPosition, writeQuorum);
+//        for (int replicaPosition : replicasPositionToWrite) {
+//            WriteQuorumThread writeQuorumThread = new WriteQuorumThread(replicaPosition, key, value);
+//            writeQuorumThread.start();
+//        }
+//    }
+    static void set(String request, int currentPortNumber, Socket sender, List<LSMTree> lsmTrees, boolean withQuorum, int writeQuorum) throws IOException, InterruptedException {
         // Praising Request.
         String data = request.substring(4, request.length() - 1);
         String key = data.split(",")[0];
@@ -145,35 +170,34 @@ public class Server {
         System.out.println("Virtual Node Index = " + vnIndex);
         int neededPortNumber = ringStructure.nodes_Ports.get(vnIndex);
         System.out.println("Correct Node Port : ------->" + neededPortNumber);
-        System.out.println("neededPortNumber is " + neededPortNumber + "  #######  " + "This Port is  " + portNumber);
+        System.out.println("neededPortNumber is " + neededPortNumber + "  #######  " + "This Port is  " + currentPortNumber);
 
         // Check if current node has a replica.
-        if (!hasReplica(neededPortNumber, portNumber)) {
+        String response = "";
+        if (!hasReplica(neededPortNumber, currentPortNumber)) {
             System.out.println("I am not in the correct node");
-            int portDestination = getPositionOfTheReplica(neededPortNumber);
-            sendToPort(portDestination, request, true);
-            sendStringToSocket(sender, "Set Successful");
+            response = getValueReadWriteQuorum(neededPortNumber, currentPortNumber, request, writeQuorum);
+            sendStringToSocket(sender, response);
         } else { // Current Node has a replica.
             for (LSMTree lsmTree : lsmTrees) { // Find the right partition.
                 if (lsmTree.getReplicaId() == neededPortNumber) {
                     // commit and end request.
                     lsmTree.commitLogs(key, value);
-                    sendStringToSocket(sender, "Set Successful");
-
                     lsmTree.put(key, value);
-                    System.out.println("The key " + key + " and value " + value + " is set in the LSMTree " + lsmTree.getReplicaId());
-                    // case first write to avoid infinite loop so we can use flag to know if we have written to the other replicas or not
-                    if (!queryWithoutQuorom) { // client request
-                        writeToOtherReplicas(portNumber, neededPortNumber, key, value, writeQuorum);
+                    if (withQuorum) {
+                        response = getValueReadWriteQuorum(neededPortNumber, currentPortNumber, request, writeQuorum);
+                        sendStringToSocket(sender, response);
                     }
-                    sendStringToSocket(sender, "Set Successful To all quorum requested");
+                    else {
+                        sendStringToSocket(sender, "Set Successful");
+                    }
                     break;
                 }
             }
         }
     }
 
-    static void get(String request, int portNumber, Socket sender, List<LSMTree> lsmTrees, boolean serverRequest, int writeQuorum) throws IOException, InterruptedException {
+    static void get(String request, int currentPortNumber, Socket sender, List<LSMTree> lsmTrees, boolean withQuorum, int readQuorum) throws IOException, InterruptedException {
         String data = request.substring(4, request.length() - 1);
         String key = data.split(",")[0];
         int hashCode = MurmurHash3.hash32x86(key.getBytes());
@@ -182,9 +206,11 @@ public class Server {
         System.out.println("Get index in correspond Node : " + nodeIndexOnRing);
         int neededPortNumber = ringStructure.nodes_Ports.get(nodeIndexOnRing);
         System.out.println("Correct Node Port : ------->" + neededPortNumber);
-        System.out.println("neededPortNumber is " + neededPortNumber + "  #######  " + "This Port is  " + portNumber);
+        System.out.println("neededPortNumber is " + neededPortNumber + "  #######  " + "This Port is  " + currentPortNumber);
 
-        if (hasReplica(neededPortNumber, portNumber)) {
+        sendRequestToAllReplicas(neededPortNumber, currentPortNumber,request);
+
+        if (!hasReplica(neededPortNumber, currentPortNumber)) {
             System.out.println("I am not in the correct node");
             int portDestination = getPositionOfTheReplica(neededPortNumber);
             sendToPort(portDestination, request, true);
@@ -193,8 +219,8 @@ public class Server {
             for (LSMTree lsmTree : lsmTrees) {
                 if (lsmTree.getReplicaId() == neededPortNumber) {
                     // ask the server to get the value from other nodes
-                    if (!serverRequest) {
-                        currentValue = getValueReadQuorum(neededPortNumber, portNumber, key, writeQuorum);
+                    if (withQuorum) {
+                        currentValue = getValueReadWriteQuorum(neededPortNumber, currentPortNumber, request, readQuorum);
                     } else {
                         currentValue = lsmTree.getValueOf(key);
                         if (currentValue == null) {
@@ -220,9 +246,10 @@ public class Server {
         int writeQuorum = Integer.parseInt(args[6]);
         int readQuorum = Integer.parseInt(args[7]);
         final int START_PORT = 5000;
-        int portNumber = START_PORT + nodeNumber;
+        int currentPortNumber = START_PORT + nodeNumber;
 
         // Print server's configurations.
+        System.out.println("Port Number = " + currentPortNumber);
         System.out.println("Node Number = " + nodeNumber);
         System.out.println("Number Of nodes : " + numberOfNodes);
         System.out.println("Number Of Virtual Nodes : " + numberOfVirtualNodes);
@@ -239,20 +266,18 @@ public class Server {
         List<LSMTree> lsmTrees = new ArrayList<>();
         Map<Integer, List<Integer>> nodeReplicas = ringStructure.nodesReplicasMapping.whichReplicasBelongToNode;
         for (int i = 0; i < replicationFactor; i++) {
-            lsmTrees.add(new LSMTree(portNumber, nodeReplicas.get(portNumber).get(i), maxMemTableSize, maxSegmentSize));
+            lsmTrees.add(new LSMTree(currentPortNumber, nodeReplicas.get(currentPortNumber).get(i), maxMemTableSize, maxSegmentSize));
         }
 
-        try (ServerSocket serverSocket = new ServerSocket(portNumber)) {
+        try (ServerSocket serverSocket = new ServerSocket(currentPortNumber)) {
 
             while (true) {
                 System.out.println("I am listening .... ");
 
-                boolean serverRequest = false;
+                boolean withQuorum = true;
                 for (LSMTree lsmTree : lsmTrees) {
                     System.out.println("LSM Tree " + lsmTree.getReplicaId()+" memTable is : ");
                     lsmTree.memTable.print();
-
-
                 }
                 // Getting request from client
                 Socket sender = serverSocket.accept();
@@ -260,13 +285,13 @@ public class Server {
                 System.out.println("Received request from  : " + sender.getPort() + " :  " + request);
                 // Sender is a server not a client.
                 if (request.charAt(0)=='*') {
-                    serverRequest = true;
+                    withQuorum = false;
                     request = request.substring(1);
                 }
                 if (request.startsWith("set")) {
-                    set(request, portNumber, sender, lsmTrees, serverRequest, readQuorum);
+                    set(request, currentPortNumber, sender, lsmTrees, withQuorum, readQuorum);
                 } else if (request.startsWith("get")) {
-                    get(request, portNumber, sender, lsmTrees, serverRequest, writeQuorum);
+                    get(request, currentPortNumber, sender, lsmTrees, withQuorum, writeQuorum);
                 }
             }
         }

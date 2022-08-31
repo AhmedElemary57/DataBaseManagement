@@ -20,7 +20,7 @@ public class ClientGUI extends JFrame {
 
     public ClientGUI()  {
         super("Client");
-        client = new Client(5000);
+        client = new Client(5000,5);
 
         this.setButton.addActionListener(new ActionListener() {
             @Override
@@ -29,7 +29,7 @@ public class ClientGUI extends JFrame {
                     out.setText("Please enter a key and a value");
                 } else {
                     try {
-                        String response=client.setRequest(setKet.getText(), setValue.getText());
+                        String response=client.sendRequest(setKet.getText(), setValue.getText(), true);
                         out.append(response+"\n");
                     } catch (IOException e1) {
                         e1.printStackTrace();
@@ -44,8 +44,8 @@ public class ClientGUI extends JFrame {
                     out.setText("Please enter a key");
                 } else {
                     try {
-                        String response=client.getRequest(getValue.getText());
-                        out.append("the key "+getValue.getText()+" has value of :"+response+"\n");
+                        String response=client.sendRequest(getValue.getText(), "", false);
+                        out.append(response+"\n");
                     } catch (IOException e1) {
                         e1.printStackTrace();
                     }

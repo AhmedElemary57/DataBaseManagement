@@ -238,7 +238,7 @@ public class LSMTree {
         }
         FileWriter fileWriter = new FileWriter(path,true);
         try {
-            fileWriter.write(key+","+value+","+System.currentTimeMillis()+'\n');
+            fileWriter.write(key+","+value+" "+System.currentTimeMillis()+'\n');
             fileWriter.close();
             System.out.println("Successfully wrote to the file.");
         } catch (IOException e) {
@@ -264,7 +264,7 @@ public class LSMTree {
         }
         FileWriter fileWriter = new FileWriter(diskReplicaPath+path);
         for (Node<String> node : nodesOfRedBlackTree) {
-            fileWriter.write(node.getKey()+","+node.getValue()+','+node.getVersion()+'\n');
+            fileWriter.write(node.getKey()+","+node.getValue()+" "+node.getVersion()+'\n');
             versionNumber++;
         }
         fileWriter.close();
@@ -296,7 +296,7 @@ public class LSMTree {
         //get the value from the SSTable
         //get the path of the SSTable
         String diskReplicaPath= "./Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/data/";
-        String path = String.valueOf(segmentIDs.get(fromSegment-1))+".txt";
+        String path = segmentIDs.get(fromSegment - 1) +".txt";
         //read the file
         File file = new File(diskReplicaPath+path);
         Scanner myReader = new Scanner(file);
@@ -307,11 +307,10 @@ public class LSMTree {
         }
         myReader.close();
         //search the value in the file
-        String value = searchKeyInSegment(key,lines.toArray(new String[lines.size()]));
+        String value = searchKeyInSegment(key,lines.toArray(new String[0]));
         if (value!=null) {
             return value;
         }
-
 
         return getValueFromSSTable(key,fromSegment-1);
     }

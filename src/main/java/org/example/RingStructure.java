@@ -74,7 +74,7 @@ public class RingStructure {
         }
         Collections.sort(keys);
     }
-    void addNode(int number){
+    void addNode(){
         for (int j = 0; j < numberOfVirtualNodes; j++) {
             int amp = 87187*numberOfNodes;
             numberOfNodes++;
@@ -98,4 +98,7 @@ public class RingStructure {
         System.out.println(ringStructure.find_Node(10));
     }
 
+    public int getNumberOfNodes() {
+        return this.numberOfNodes;
+    }
 }
