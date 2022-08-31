@@ -13,15 +13,27 @@ import static java.awt.Color.RED;
 public class Node<T extends Comparable<T>> {
     @NonNull
     private T key;
+
+    public T getVersion() {
+        return version;
+    }
+
+    public void setVersion(T version) {
+        this.version = version;
+    }
+
     private T value;
+
+    private T version;
     private int height;
     @ToString.Exclude
     private Node<T> parent, left, right;
     private Color color = RED;
 
-    public Node(T key, T value) {
+    public Node(T key, T value, T version) {
         this.key = key;
         this.value = value;
+        this.version = version;
         parent = left = right = null;
         height = 0;
     }

@@ -14,8 +14,8 @@ import static java.awt.Color.RED;
 public class RedBlackTree<T extends Comparable<T>> {
     private Node<T> root;
 
-    public void insert(T key , T value) {
-        Node<T> nodeToBeInsert = new Node<>(key,value);
+    public void insert(T key , T value,T version) {
+        Node<T> nodeToBeInsert = new Node<>(key,value,version);
         Node<T> tmpRoot;
         tmpRoot = insert(root, nodeToBeInsert);
         //After insertion, we should maintain red black tree properties
@@ -118,9 +118,9 @@ public class RedBlackTree<T extends Comparable<T>> {
             redBlackRules(node.getParent());
     }
 
-    public T search(T key) {
+    public String search(T key) {
         if (search(root, key) != null)
-            return search(root, key).getValue();
+            return search(root, key).getValue()+" "+search(root, key).getVersion();
         else
             return null;
     }
@@ -352,34 +352,6 @@ public class RedBlackTree<T extends Comparable<T>> {
         node.setParent(rightChild);//update the parent value
     }
 
-    public void batchInsert(String pathName) {
-        try {
-            File file = new File(pathName);
-            Scanner scanner = new Scanner(file);
-            while (scanner.hasNextLine()) {
-                T word = (T) scanner.nextLine();
-                T value = (T)  scanner.nextLine();
-                insert(word,value);
-            }
-            scanner.close();
-        } catch (FileNotFoundException e) {
-            System.out.println("An error occur while reading this file");
-        }
-    }
-
-    public void batchDelete(String pathName){
-        try {
-            File file = new File(pathName);
-            Scanner scanner = new Scanner(file);
-            while (scanner.hasNextLine()) {
-                T word = (T) scanner.nextLine();
-                delete(word);
-            }
-            scanner.close();
-        } catch (FileNotFoundException e) {
-            System.out.println("An error occur while reading this file");
-        }
-    }
 
     public Node<T> getRoot(){
         return this.root;
@@ -391,10 +363,7 @@ public class RedBlackTree<T extends Comparable<T>> {
 
     public static void main(String[] args) {
         RedBlackTree<Integer> redBlackTree = new RedBlackTree<>();
-        redBlackTree.insert(1,1);
-        redBlackTree.insert(5,1);
-        redBlackTree.insert(7,1);
-        redBlackTree.insert(-1,1);
+
 
         List<Node<Integer>> l= redBlackTree.inOrderTraversal();
         for (Node<Integer> n:l) {

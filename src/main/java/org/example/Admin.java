@@ -10,14 +10,9 @@ public class Admin {
 
     public static void main(String[] args) throws IOException {
 
-        int numberOfNodes=5;
-        Thread buildServer =new Thread(new Runnable() {
-            @Override
-            public void run() {
-
-
-            }
-        }
-        );
+        ProcessBuilder builder = new ProcessBuilder("/home/elemary/Projects/DataBaseManagement/src/main/java/org/example/test.sh");
+        builder.directory(new File(System.getProperty("user.home")));
+        builder.redirectError(ProcessBuilder.Redirect.INHERIT);
+        builder.start();
     }
 }

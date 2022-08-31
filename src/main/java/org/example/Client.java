@@ -8,9 +8,13 @@ import java.util.Scanner;
 
 public class Client {
 
-    static ServerSocket clientSocket;
+    int portNumber;
 
-     String setRequest(String key, String value) throws IOException {
+    public Client(int portNumber) {
+        this.portNumber = portNumber;
+    }
+
+    String setRequest(String key, String value) throws IOException {
          int numberOfNodes=5;
          Random rand = new Random();
          int randomConnectToNode = rand.nextInt(numberOfNodes)+1;

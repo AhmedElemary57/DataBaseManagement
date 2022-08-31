@@ -20,7 +20,7 @@ public class ClientGUI extends JFrame {
 
     public ClientGUI()  {
         super("Client");
-        client = new Client();
+        client = new Client(5000);
 
         this.setButton.addActionListener(new ActionListener() {
             @Override

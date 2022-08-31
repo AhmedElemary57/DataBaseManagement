@@ -68,7 +68,7 @@ public class LSMTree {
     }
     public void mergeCompaction() throws IOException {
         String diskReplicaPath= "./Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/data/";
-        String path = nextSegmentID+".txt";
+
         int nextSegmentID=segmentNumber,maxSize=maxSegmentSize;
         int tempID=1,size=0,counter;
         boolean i=false,j=false;
@@ -214,8 +214,8 @@ public class LSMTree {
     void put(String key,String value) throws IOException {
         ////func
         ///
-        memTable.insert(key,value);
-        memTableSize=memTable.size();
+        memTable.insert(key,value,Long.toString(System.currentTimeMillis()));
+        memTableSize = memTable.size();
         bloomFilter.put(key);
         //invalidate the row cache value if it is there
         if(rowCache.containsKey(key)){
@@ -238,7 +238,7 @@ public class LSMTree {
         }
         FileWriter fileWriter = new FileWriter(path,true);
         try {
-            fileWriter.write(key+","+value+'\n');
+            fileWriter.write(key+","+value+","+System.currentTimeMillis()+'\n');
             fileWriter.close();
             System.out.println("Successfully wrote to the file.");
         } catch (IOException e) {
@@ -251,6 +251,7 @@ public class LSMTree {
         //flush to disk
         //write the memtable to disk in a json file
         String diskReplicaPath= "./Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/data/";
+
         segmentNumber++;
         nextSegmentID=segmentNumber;
         String path = nextSegmentID+".txt";
@@ -263,7 +264,7 @@ public class LSMTree {
         }
         FileWriter fileWriter = new FileWriter(diskReplicaPath+path);
         for (Node<String> node : nodesOfRedBlackTree) {
-            fileWriter.write(node.getKey()+","+node.getValue()+","+'\n');
+            fileWriter.write(node.getKey()+","+node.getValue()+','+node.getVersion()+'\n');
             versionNumber++;
         }
         fileWriter.close();
@@ -326,7 +327,7 @@ public class LSMTree {
         lsmTree.put("8","8");
         lsmTree.put("9","9");
         lsmTree.put("10","10");
-        lsmTree.put("11","11");
+        lsmTree.put("1","11");
         lsmTree.put("12","12");
         lsmTree.put("13","13");
         lsmTree.put("14","14");
