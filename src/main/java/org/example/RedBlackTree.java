@@ -360,7 +360,14 @@ public class RedBlackTree<T extends Comparable<T>> {
     public void clear(){
         this.root = null;
     }
-
+    public void print(){
+        List<Node<T>> list = inOrderTraversal();
+        System.out.println("Printing the tree{");
+        for (Node<T> node : list) {
+            System.out.println("Key : "+node.getKey()+"| value: "+node.getValue()+" | version : "+node.getVersion());
+        }
+        System.out.println("}");
+    }
     public static void main(String[] args) {
         RedBlackTree<Integer> redBlackTree = new RedBlackTree<>();
 

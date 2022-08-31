@@ -55,7 +55,7 @@ public class Server {
             Random rn = new Random();
             int randomPosition = rn.nextInt(list.size());
             result.add(list.get(randomPosition));
-            list.remove(Integer.valueOf(randomPosition));
+            list.remove(randomPosition);
         }
         return result;
     }
@@ -160,20 +160,25 @@ public class Server {
                 System.out.println("I am listening .... ");
 
                 boolean serverRequest = false;
+                for (LSMTree lsmTree : lsmTrees) {
+                    System.out.println("LSM Tree " + lsmTree.getReplicaId()+" memTable is : ");
+                    lsmTree.memTable.print();
 
+
+                }
                 // Getting request from client
                 Socket sender = serverSocket.accept();
                 String request = getInputFromSocket(sender);
                 System.out.println("Received request from  : " + sender.getPort() + " :  " + request);
-
                 // Sender is a server not a client.
                 if (request.charAt(0)=='*') {
                     serverRequest = true;
+                    request = request.substring(1);
                 }
                 if (request.startsWith("set")) {
-                    set(request, portNumber, sender, lsmTrees, serverRequest, writeQuorum);
+                    set(request, portNumber, sender, lsmTrees, serverRequest, readQuorum);
                 } else if (request.startsWith("get")) {
-                    get(request, portNumber, sender, lsmTrees, serverRequest, readQuorum);
+                    get(request, portNumber, sender, lsmTrees, serverRequest, writeQuorum);
                 }
             }
         }
