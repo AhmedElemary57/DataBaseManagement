@@ -26,7 +26,7 @@ public class ReadQuorumThread implements Runnable {
     public void run() {
         try {
             System.out.println("ReadQuorumThread started and was done by Thread number "+Thread.currentThread().getId());
-            String response = Server.sendToPort(replicaPosition, "get("+key+")",true);
+            String response = Server.sendToPort(replicaPosition, "*get("+key+")",true);
             String[] attribute = response.split(" ");
             value = attribute[0];
             version = attribute[1];

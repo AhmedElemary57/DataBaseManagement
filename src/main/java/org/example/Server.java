@@ -130,7 +130,7 @@ public class Server {
         }
     }
 
-    static void set(String request, int portNumber, Socket sender, List<LSMTree> lsmTrees, boolean queryWithoutQuorom, int writeQuorum) throws IOException {
+    static void set(String request, int portNumber, Socket sender, List<LSMTree> lsmTrees, boolean withQuorom, int writeQuorum) throws IOException {
         // Praising Request.
         String data = request.substring(4, request.length() - 1);
         String key = data.split(",")[0];
@@ -163,7 +163,7 @@ public class Server {
                     lsmTree.put(key, value);
                     System.out.println("The key " + key + " and value " + value + " is set in the LSMTree " + lsmTree.getReplicaId());
                     // case first write to avoid infinite loop so we can use flag to know if we have written to the other replicas or not
-                    if (!queryWithoutQuorom) { // client request
+                    if (withQuorom) { // client request
                         writeToOtherReplicas(portNumber, neededPortNumber, key, value, writeQuorum);
                     }
                     sendStringToSocket(sender, "Set Successful To all quorum requested");
@@ -173,7 +173,7 @@ public class Server {
         }
     }
 
-    static void get(String request, int portNumber, Socket sender, List<LSMTree> lsmTrees, boolean serverRequest, int writeQuorum) throws IOException, InterruptedException {
+    static void get(String request, int portNumber, Socket sender, List<LSMTree> lsmTrees, boolean withQuorum, int writeQuorum) throws IOException, InterruptedException {
         String data = request.substring(4, request.length() - 1);
         String key = data.split(",")[0];
         int hashCode = MurmurHash3.hash32x86(key.getBytes());
@@ -184,7 +184,7 @@ public class Server {
         System.out.println("Correct Node Port : ------->" + neededPortNumber);
         System.out.println("neededPortNumber is " + neededPortNumber + "  #######  " + "This Port is  " + portNumber);
 
-        if (hasReplica(neededPortNumber, portNumber)) {
+        if (!hasReplica(neededPortNumber, portNumber)) {
             System.out.println("I am not in the correct node");
             int portDestination = getPositionOfTheReplica(neededPortNumber);
             sendToPort(portDestination, request, true);
@@ -193,7 +193,7 @@ public class Server {
             for (LSMTree lsmTree : lsmTrees) {
                 if (lsmTree.getReplicaId() == neededPortNumber) {
                     // ask the server to get the value from other nodes
-                    if (!serverRequest) {
+                    if (withQuorum) {
                         currentValue = getValueReadQuorum(neededPortNumber, portNumber, key, writeQuorum);
                     } else {
                         currentValue = lsmTree.getValueOf(key);
@@ -247,7 +247,7 @@ public class Server {
             while (true) {
                 System.out.println("I am listening .... ");
 
-                boolean serverRequest = false;
+                boolean withQuorum = true;
                 for (LSMTree lsmTree : lsmTrees) {
                     System.out.println("LSM Tree " + lsmTree.getReplicaId()+" memTable is : ");
                     lsmTree.memTable.print();
@@ -260,13 +260,13 @@ public class Server {
                 System.out.println("Received request from  : " + sender.getPort() + " :  " + request);
                 // Sender is a server not a client.
                 if (request.charAt(0)=='*') {
-                    serverRequest = true;
+                    withQuorum = false;
                     request = request.substring(1);
                 }
                 if (request.startsWith("set")) {
-                    set(request, portNumber, sender, lsmTrees, serverRequest, readQuorum);
+                    set(request, portNumber, sender, lsmTrees, withQuorum, readQuorum);
                 } else if (request.startsWith("get")) {
-                    get(request, portNumber, sender, lsmTrees, serverRequest, writeQuorum);
+                    get(request, portNumber, sender, lsmTrees, withQuorum, writeQuorum);
                 }
             }
         }
