@@ -11,7 +11,7 @@ public class Admin {
 
     public static void main(String[] args) throws IOException {
 
-        ProcessBuilder pb = new ProcessBuilder("IdeaProjects/DataBaseManagement/src/main/java/org/example/test.sh");
+        ProcessBuilder pb = new ProcessBuilder("/home/elemary/Projects/DataBaseManagement/src/main/java/org/example/test.sh");
         pb.directory(new File(System.getProperty("user.home")));
         pb.start();
     }
