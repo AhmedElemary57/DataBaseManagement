@@ -288,8 +288,7 @@ public class Server {
                 if (request.charAt(0)=='*') {
                     withQuorum = false;
                     request = request.substring(1);
-                }
-                if (request.startsWith("set")) {
+                } else if (request.startsWith("set")) {
                     set(request, currentPortNumber, sender, lsmTrees, withQuorum, readQuorum);
                 } else if (request.startsWith("get")) {
                     get(request, currentPortNumber, sender, lsmTrees, withQuorum, writeQuorum);
@@ -297,6 +296,7 @@ public class Server {
                     ringStructure.addNode();
                     ringStructure.nodesReplicasMapping.printWhichReplicasBelongToNode();
                 }
+                System.out.println(request);
             }
         }
     }
