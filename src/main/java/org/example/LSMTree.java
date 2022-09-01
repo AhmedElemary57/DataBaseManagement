@@ -21,6 +21,7 @@ public class LSMTree {
     RedBlackTree<String> memTable;
     Map<String,String> rowCache;
     BloomFilter<String> bloomFilter ;
+    String diskPath="";
     public LSMTree(Integer serverName, Integer memTableID, int maxMemeTableSize, int maxSegmentSize) {
         this.nodeNumber = serverName;
         this.replicaId = memTableID;
@@ -34,6 +35,7 @@ public class LSMTree {
         segmentIDs= new ArrayList<>();
         this.versionNumber=0;
         this.rowCache= new HashMap<>();
+        this.diskPath= "/home/elemary/Projects/DataBaseManagement/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
     }
     public Integer getNodeNumber() {
         return nodeNumber;
@@ -47,42 +49,22 @@ public class LSMTree {
         return replicaId;
     }
 
-    public void setReplicaId(Integer replicaId) {
-        this.replicaId = replicaId;
-    }
-
-    public int getMaxMemeTableSize() {
-        return maxMemeTableSize;
-    }
-
-    public void setMaxMemeTableSize(int maxMemeTableSize) {
-        this.maxMemeTableSize = maxMemeTableSize;
-    }
-
-    public int getMemTableSize() {
-        return memTableSize;
-    }
-
-    public void setMemTableSize(int memTableSize) {
-        this.memTableSize = memTableSize;
-    }
     public void mergeCompaction() throws IOException {
-        String diskReplicaPath= "./Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/data/";
-
+        diskPath=  "/home/elemary/Projects/DataBaseManagement/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
         int nextSegmentID=segmentNumber,maxSize=maxSegmentSize;
         int tempID=1,size=0,counter;
         boolean i=false,j=false;
         if(nextSegmentID%2==1)counter=nextSegmentID-1;
         else counter=nextSegmentID;
         for(int k=0;k<counter;k+=2){
-            String file1name=diskReplicaPath+String.valueOf(k+1)+".txt";
-            String file2name=diskReplicaPath+String.valueOf(k+2)+".txt";
+            String file1name=diskPath+String.valueOf(k+1)+".txt";
+            String file2name=diskPath+String.valueOf(k+2)+".txt";
             File myObj = new File(file1name);
             File myObj2 = new File(file2name);
-            File temp = new File(diskReplicaPath+"t"+String.valueOf(tempID)+".txt");
+            File temp = new File(diskPath+"t"+String.valueOf(tempID)+".txt");
             Scanner myReader = new Scanner(myObj);
             Scanner myReader2 = new Scanner(myObj2);
-            FileWriter myWriter = new FileWriter(diskReplicaPath+"t"+String.valueOf(tempID)+".txt",true);
+            FileWriter myWriter = new FileWriter(diskPath+"t"+String.valueOf(tempID)+".txt",true);
             String data=myReader.nextLine(),data2=myReader2.nextLine();
 
             String key1,key2;
@@ -112,7 +94,7 @@ public class LSMTree {
                 if(size>=maxSize){
                     myWriter.close();
                     tempID++;
-                    myWriter = new FileWriter(diskReplicaPath+"t"+String.valueOf(tempID)+".txt",true);
+                    myWriter = new FileWriter(diskPath+"t"+String.valueOf(tempID)+".txt",true);
                     size=0;
                 }
             }
@@ -122,7 +104,7 @@ public class LSMTree {
             if(size>=maxSize){
                 myWriter.close();
                 tempID++;
-                myWriter = new FileWriter(diskReplicaPath+"t"+String.valueOf(tempID)+".txt",true);
+                myWriter = new FileWriter(diskPath+"t"+String.valueOf(tempID)+".txt",true);
                 size=0;
             }
             while (myReader.hasNextLine()){
@@ -132,7 +114,7 @@ public class LSMTree {
                 if(size>=maxSize){
                     myWriter.close();
                     tempID++;
-                    myWriter = new FileWriter(diskReplicaPath+"t"+String.valueOf(tempID)+".txt",true);
+                    myWriter = new FileWriter(diskPath+"t"+String.valueOf(tempID)+".txt",true);
                     size=0;
                 }
             }
@@ -143,7 +125,7 @@ public class LSMTree {
                 if(size>=maxSize){
                     myWriter.close();
                     tempID++;
-                    myWriter = new FileWriter(diskReplicaPath+"t"+String.valueOf(tempID)+".txt",true);
+                    myWriter = new FileWriter(diskPath+"t"+String.valueOf(tempID)+".txt",true);
                     size=0;
                 }
             }
@@ -164,17 +146,17 @@ public class LSMTree {
         segmentIDs.clear();
         System.out.println(tempID);
         for (int k = 1; k < tempID; k++) {
-            File file = new File(diskReplicaPath+"t"+String.valueOf(k)+".txt");
-            File rename = new File(diskReplicaPath+String.valueOf(k)+".txt");
+            File file = new File(diskPath+"t"+String.valueOf(k)+".txt");
+            File rename = new File(diskPath+String.valueOf(k)+".txt");
             file.renameTo(rename);
             segmentIDs.add(k);
         }
         segmentIDs.add(tempID);
-        if(new File(diskReplicaPath+"t"+String.valueOf(tempID)+".txt").exists())
-            new File(diskReplicaPath+"t"+String.valueOf(tempID)+".txt").delete();
+        if(new File(diskPath+"t"+String.valueOf(tempID)+".txt").exists())
+            new File(diskPath+"t"+String.valueOf(tempID)+".txt").delete();
         if(nextSegmentID==1){
-            File file = new File(diskReplicaPath+String.valueOf(counter+1)+".txt");
-            File rename = new File(diskReplicaPath+String.valueOf(tempID)+".txt");
+            File file = new File(diskPath+String.valueOf(counter+1)+".txt");
+            File rename = new File(diskPath+String.valueOf(tempID)+".txt");
             file.renameTo(rename);
         }
         segmentNumber=tempID;
@@ -190,36 +172,27 @@ public class LSMTree {
  *     Ask bloom filter if it is present
  *     If not so we will check our SSTable from newer to oldest to get the value.
  * **/
-    String getValueOf(String key) throws IOException {
-        //check our cache row and return to the client with the result if present
+public String getValueOf(String key) throws IOException {
         if (rowCache.containsKey(key)){
             return rowCache.get(key);
         }
-        //If not present check in the mem-table and return it if present
         String value = memTable.search(key);
         if (memTable.search(key)!=null){
             return value;
         } else {
-            //Ask bloom filter if it is present
             if (bloomFilter.mightContain(key)){
-                //If not so we will check our SSTable from newer to oldest to get the value.
                 return getValueFromSSTable(key,segmentIDs.size());
             } else {
                 return null;
             }
-
         }
-
     }
-    void put(String key,String value) throws IOException {
-        ////func
-        ///
-        memTable.insert(key,value,Long.toString(System.currentTimeMillis()));
+    public void setValueOf(String key, String value) throws IOException {
+        memTable.insert(key,value);
         memTableSize = memTable.size();
+        commitLogs(key,value);
         bloomFilter.put(key);
-        //invalidate the row cache value if it is there
         if(rowCache.containsKey(key)){
-            //assume removing the invalidation is done
             rowCache.remove(key);
         }
         if (memTableSize>=maxMemeTableSize){
@@ -230,9 +203,8 @@ public class LSMTree {
         }
     }
     void commitLogs(String key,String value) throws IOException {
-        String diskReplicaPath= "./Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
-        String path = diskReplicaPath+"commitLog"+".txt";
-        File file = new File("."+File.separator+diskReplicaPath);
+        String path = diskPath+"commitLog"+nodeNumber+".txt";
+        File file = new File(diskPath);
         if (!file.exists()) {
             file.mkdirs();
         }
@@ -240,38 +212,30 @@ public class LSMTree {
         try {
             fileWriter.write(key+","+value+" "+System.currentTimeMillis()+'\n');
             fileWriter.close();
-            System.out.println("Successfully wrote to the file.");
         } catch (IOException e) {
-            System.out.println("An error occurred.");
             e.printStackTrace();
         }
     }
 
     void flushToDisk() throws IOException {
-        //flush to disk
-        //write the memtable to disk in a json file
-        String diskReplicaPath= "./Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/data/";
-
         segmentNumber++;
         nextSegmentID=segmentNumber;
-        String path = nextSegmentID+".txt";
-
-        //write to disk
+        String fileName = nextSegmentID+".txt";
         List<Node<String>> nodesOfRedBlackTree = memTable.inOrderTraversal();
-        File file = new File("."+File.separator+diskReplicaPath);
+        File file = new File(diskPath+"/Data/");
         if (!file.exists()) {
             file.mkdirs();
         }
-        FileWriter fileWriter = new FileWriter(diskReplicaPath+path);
+        FileWriter fileWriter = new FileWriter(diskPath+"/Data/"+fileName);
         for (Node<String> node : nodesOfRedBlackTree) {
-            fileWriter.write(node.getKey()+","+node.getValue()+" "+node.getVersion()+'\n');
+            fileWriter.write(node.getKey()+","+node.getValue()+'\n');
             versionNumber++;
         }
+        String path = diskPath+"commitLog"+nodeNumber+".txt";
+        File commitFile = new File(path);
+        commitFile.delete();
         fileWriter.close();
-
     }
-
-    //string binary search
     String searchKeyInSegment(String key,String[] segmentData) throws IOException {
         int low = 0;
         int high = segmentData.length-1;
@@ -285,20 +249,14 @@ public class LSMTree {
             } else {
                 return keyValue[1];
             }
-    }
+        }
         return null;
     }
     String getValueFromSSTable(String key,int fromSegment) throws IOException {
         if (fromSegment==0){
             return null;
-        }
-
-        //get the value from the SSTable
-        //get the path of the SSTable
-        String diskReplicaPath= "./Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/data/";
-        String path = segmentIDs.get(fromSegment - 1) +".txt";
-        //read the file
-        File file = new File(diskReplicaPath+path);
+        }String segmentName = segmentIDs.get(fromSegment - 1) +".txt";
+        File file = new File(diskPath+"/Data/"+segmentName);
         Scanner myReader = new Scanner(file);
         List<String> lines = new ArrayList<>();
         while (myReader.hasNextLine()) {
@@ -306,79 +264,54 @@ public class LSMTree {
             lines.add(data);
         }
         myReader.close();
-        //search the value in the file
         String value = searchKeyInSegment(key,lines.toArray(new String[0]));
         if (value!=null) {
             return value;
         }
-
         return getValueFromSSTable(key,fromSegment-1);
     }
     public static void main(String[] args) throws IOException, InterruptedException {
         LSMTree lsmTree = new LSMTree(5007,788,5,10);
-        lsmTree.put("1","a");
-        lsmTree.put("2","2");
-        lsmTree.put("2","3");
-        lsmTree.put("4","4");
-        lsmTree.put("5","5");
-        lsmTree.put("6","I'm here");
-        lsmTree.put("7","7");
-        lsmTree.put("8","8");
-        lsmTree.put("9","9");
-        lsmTree.put("10","10");
-        lsmTree.put("1","11");
-        lsmTree.put("12","12");
-        lsmTree.put("13","13");
-        lsmTree.put("14","14");
-        lsmTree.put("15","15");
-        lsmTree.put("16","16");
-        lsmTree.put("17","17");
-        lsmTree.put("18","18");
-        lsmTree.put("19","19");
-        lsmTree.put("20","20");
-        lsmTree.put("21","21");
-        lsmTree.put("22","22");
-        lsmTree.put("23","23");
-        lsmTree.put("24","24");
-        lsmTree.put("25","25");
-        lsmTree.put("26","26");
-        lsmTree.put("27","27");
-        lsmTree.put("28","28");
-        lsmTree.put("29","29");
-        lsmTree.put("30","30");
-        lsmTree.put("31","31");
-        lsmTree.put("32","32");
-        lsmTree.put("33","33");
-        lsmTree.put("34","34");
-        lsmTree.put("35","35");
-        lsmTree.put("36","36");
-        lsmTree.put("37","37");
-        lsmTree.put("38","38");
-        lsmTree.put("39","39");
-        lsmTree.put("40","40");
-        System.out.println(lsmTree.getValueFromSSTable("2", lsmTree.segmentIDs.size()));
-        lsmTree.mergeCompaction();
-        lsmTree.put("1","a");
-        lsmTree.put("2","2");
-        lsmTree.put("2","3");
-        lsmTree.put("4","4");
-        lsmTree.put("5","5");
-        lsmTree.put("6","I'm here");
-        lsmTree.put("7","7");
-        lsmTree.put("8","8");
-        lsmTree.put("9","9");
-        lsmTree.put("10","10");
-        lsmTree.put("11","11");
-        lsmTree.put("12","12");
-        lsmTree.put("13","13");
-        lsmTree.put("14","14");
-        lsmTree.put("15","15");
-        lsmTree.put("16","16");
-        lsmTree.put("17","17");
-        lsmTree.put("18","18");
-        lsmTree.put("19","19");
-        lsmTree.mergeCompaction();
-
+        lsmTree.setValueOf("1","a");
+        lsmTree.setValueOf("2","2");
+        lsmTree.setValueOf("2","3");
+        lsmTree.setValueOf("4","4");
+        lsmTree.setValueOf("5","5");
+        lsmTree.setValueOf("6","I'm here");
+        lsmTree.setValueOf("7","7");
+        lsmTree.setValueOf("8","8");
+        lsmTree.setValueOf("9","9");
+        lsmTree.setValueOf("10","10");
+        lsmTree.setValueOf("1","11");
+        lsmTree.setValueOf("12","12");
+        lsmTree.setValueOf("13","13");
+        lsmTree.setValueOf("14","14");
+        lsmTree.setValueOf("15","15");
+        lsmTree.setValueOf("16","16");
+        lsmTree.setValueOf("17","17");
+        lsmTree.setValueOf("18","18");
+        lsmTree.setValueOf("19","19");
+        lsmTree.setValueOf("20","20");
+        lsmTree.setValueOf("21","21");
+        lsmTree.setValueOf("22","22");
+        lsmTree.setValueOf("23","23");
+        lsmTree.setValueOf("24","24");
+        lsmTree.setValueOf("25","25");
+        lsmTree.setValueOf("26","26");
+        lsmTree.setValueOf("27","27");
+        lsmTree.setValueOf("28","28");
+        lsmTree.setValueOf("29","29");
+        lsmTree.setValueOf("30","30");
+        lsmTree.setValueOf("31","31");
+        lsmTree.setValueOf("32","32");
+        lsmTree.setValueOf("33","33");
+        lsmTree.setValueOf("34","34");
+        lsmTree.setValueOf("35","35");
+        lsmTree.setValueOf("36","36");
+        lsmTree.setValueOf("37","37");
+        lsmTree.setValueOf("38","38");
+        lsmTree.setValueOf("39","39");
+        lsmTree.setValueOf("40","40");
 
     }
 

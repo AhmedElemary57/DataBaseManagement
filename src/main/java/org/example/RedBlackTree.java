@@ -14,8 +14,8 @@ import static java.awt.Color.RED;
 public class RedBlackTree<T extends Comparable<T>> {
     private Node<T> root;
 
-    public void insert(T key , T value,T version) {
-        Node<T> nodeToBeInsert = new Node<>(key,value,version);
+    public void insert(T key , T value) {
+        Node<T> nodeToBeInsert = new Node<>(key,value);
         Node<T> tmpRoot;
         tmpRoot = insert(root, nodeToBeInsert);
         //After insertion, we should maintain red black tree properties
@@ -118,9 +118,9 @@ public class RedBlackTree<T extends Comparable<T>> {
             redBlackRules(node.getParent());
     }
 
-    public String search(T key) {
+    public T search(T key) {
         if (search(root, key) != null)
-            return search(root, key).getValue()+" "+search(root, key).getVersion();
+            return search(root, key).getValue();
         else
             return null;
     }
@@ -364,7 +364,7 @@ public class RedBlackTree<T extends Comparable<T>> {
         List<Node<T>> list = inOrderTraversal();
         System.out.println("Printing the tree{");
         for (Node<T> node : list) {
-            System.out.println("Key : "+node.getKey()+"| value: "+node.getValue()+" | version : "+node.getVersion());
+            System.out.println("Key : "+node.getKey()+"| value: "+node.getValue());
         }
         System.out.println("}");
     }
@@ -377,5 +377,6 @@ public class RedBlackTree<T extends Comparable<T>> {
             System.out.println(n.getKey());
         }
     }
+
 
 }
