@@ -440,6 +440,8 @@ public class InputVerificationForm extends JPanel {
 
         // add start button
         JButton startButton = new JButton("Start");
+        JButton addButton = new JButton("Add Node");
+        addButton.setEnabled(false);
         //startButton.addActionListener( e -> storeFields() );
         startButton.addActionListener( e -> {
             try {
@@ -447,13 +449,24 @@ public class InputVerificationForm extends JPanel {
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
-            frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING) );
+            startButton.setEnabled(false);
+            addButton.setEnabled(true);
         } );
+
+
         // make a panel for the buttons
         JPanel buttonPanel = new JPanel();
         buttonPanel.add(startButton);
+        buttonPanel.add(addButton);
         newContentPane.add(buttonPanel, BorderLayout.SOUTH);
 
+        addButton.addActionListener(e -> {
+            try {
+                Admin.addNode(getFields());
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        });
         frame.setContentPane(newContentPane);
 
         //Display the window.

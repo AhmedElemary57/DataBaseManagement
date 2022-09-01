@@ -183,7 +183,7 @@ public class Server {
                 if (lsmTree.getReplicaId() == neededPortNumber) {
                     // commit and end request.
                     lsmTree.commitLogs(key, value);
-                    lsmTree.put(key, value);
+                    lsmTree.setValueOf(key, value);
                     if (withQuorum) {
                         response = getValueReadWriteQuorum(neededPortNumber, currentPortNumber, request, writeQuorum);
                         sendStringToSocket(sender, response);
@@ -207,8 +207,6 @@ public class Server {
         int neededPortNumber = ringStructure.nodes_Ports.get(nodeIndexOnRing);
         System.out.println("Correct Node Port : ------->" + neededPortNumber);
         System.out.println("neededPortNumber is " + neededPortNumber + "  #######  " + "This Port is  " + currentPortNumber);
-
-        sendRequestToAllReplicas(neededPortNumber, currentPortNumber,request);
 
         if (!hasReplica(neededPortNumber, currentPortNumber)) {
             System.out.println("I am not in the correct node");
