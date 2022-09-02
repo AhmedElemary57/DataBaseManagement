@@ -280,6 +280,7 @@ public class Server {
                 // Getting request from client
                 Socket sender = serverSocket.accept();
                 String request = getInputFromSocket(sender);
+
                 System.out.println("Received request from  : " + sender.getPort() + " :  " + request);
                 // Sender is a server not a client.
                 if (request.charAt(0)=='*') {
@@ -290,7 +291,11 @@ public class Server {
                     set(request, currentPortNumber, sender, lsmTrees, withQuorum, readQuorum);
                 } else if (request.startsWith("get")) {
                     get(request, currentPortNumber, sender, lsmTrees, withQuorum, writeQuorum);
+                }else if (request.startsWith("addNode")){
+                    ringStructure.addNode();
+                    ringStructure.nodesReplicasMapping.printWhichReplicasBelongToNode();
                 }
+                System.out.println(request);
             }
         }
     }
