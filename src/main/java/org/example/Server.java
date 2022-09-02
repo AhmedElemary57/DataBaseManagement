@@ -1,6 +1,8 @@
 package org.example;
 
 import org.apache.commons.codec.digest.MurmurHash3;
+import org.example.Tests.Rehash;
+
 import java.net.*;
 import java.io.*;
 import java.util.*;
@@ -173,6 +175,7 @@ public class Server {
         System.out.println("neededPortNumber is " + neededPortNumber + "  #######  " + "This Port is  " + currentPortNumber);
 
         // Check if current node has a replica.
+        key= String.valueOf(hashCode);
         String response = "";
         if (!hasReplica(neededPortNumber, currentPortNumber)) {
             System.out.println("I am not in the correct node");
@@ -207,12 +210,12 @@ public class Server {
         int neededPortNumber = ringStructure.nodes_Ports.get(nodeIndexOnRing);
         System.out.println("Correct Node Port : ------->" + neededPortNumber);
         System.out.println("neededPortNumber is " + neededPortNumber + "  #######  " + "This Port is  " + currentPortNumber);
-
+        key= String.valueOf(hashCode);
+        String response = "";
         if (!hasReplica(neededPortNumber, currentPortNumber)) {
             System.out.println("I am not in the correct node");
-            int portDestination = getPositionOfTheReplica(neededPortNumber);
-            sendToPort(portDestination, request, true);
-            sendStringToSocket(sender, currentValue);
+            response = getValueReadWriteQuorum(neededPortNumber, currentPortNumber, request, readQuorum);
+            sendStringToSocket(sender, response);
         } else {
             for (LSMTree lsmTree : lsmTrees) {
                 if (lsmTree.getReplicaId() == neededPortNumber) {
@@ -295,6 +298,10 @@ public class Server {
                     ringStructure.addNode();
                     ringStructure.nodesReplicasMapping.printWhichReplicasBelongToNode();
                     ringStructure.nodesReplicasMapping.printChangedNodes();
+                    String newNodePort = request.split(" ")[1];
+                    String newPartitionPath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ newNodePort +"/ReplicaOf"+ newNodePort +"/Data/";
+                    String oldPartitionPath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ currentPortNumber  +"/ReplicaOf"+ currentPortNumber +"/Data/";
+                    Rehash.createNewPartition(newPartitionPath, oldPartitionPath);
                 }
                 System.out.println(request);
             }

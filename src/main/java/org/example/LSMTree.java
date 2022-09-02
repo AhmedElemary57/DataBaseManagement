@@ -27,20 +27,31 @@ public class LSMTree {
         this.replicaId = memTableID;
         this.maxMemeTableSize = maxMemeTableSize;
         this.memTable = new RedBlackTree<>();
-        this.segmentNumber=0;
+        this.diskPath= "/home/elemary/Projects/DataBaseManagement/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
         this.maxSegmentSize=maxSegmentSize;
         this.nextSegmentID=segmentNumber;
         this.rowCache = new HashMap<>();
         this.bloomFilter = BloomFilter.create(Funnels.stringFunnel(Charsets.UTF_16), 100, 0.01);
-        segmentIDs= new ArrayList<>();
-        this.versionNumber=0;
+        fillSegmentIDs();
+        this.versionNumber=segmentIDs.size();
         this.rowCache= new HashMap<>();
-        this.diskPath= "/home/elemary/Projects/DataBaseManagement/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
+        this.segmentNumber=0;
     }
     public Integer getNodeNumber() {
         return nodeNumber;
     }
-
+    public void fillSegmentIDs(){
+        segmentIDs=new ArrayList<>();
+        File folder = new File(diskPath+"Data/");
+        File[] listOfFiles = folder.listFiles();
+        if (listOfFiles != null) {
+            for (int i = 0; i < listOfFiles.length; i++) {
+                if (listOfFiles[i].isFile()) {
+                    segmentIDs.add(Integer.parseInt(listOfFiles[i].getName().split("\\.")[0]));
+                }
+            }
+        }
+    }
     public void setNodeNumber(Integer nodeNumber) {
         this.nodeNumber = nodeNumber;
     }
@@ -172,7 +183,7 @@ public class LSMTree {
  *     Ask bloom filter if it is present
  *     If not so we will check our SSTable from newer to oldest to get the value.
  * **/
-public String getValueOf(String key) throws IOException {
+    public String getValueOf(String key) throws IOException {
         if (rowCache.containsKey(key)){
             return rowCache.get(key);
         }
@@ -180,7 +191,7 @@ public String getValueOf(String key) throws IOException {
         if (memTable.search(key)!=null){
             return value;
         } else {
-            if (bloomFilter.mightContain(key)){
+            if (1==1){// TODO FIX BLOOM FILTER in case of crash recovery we should check if the key is present in the bloom filter
                 return getValueFromSSTable(key,segmentIDs.size());
             } else {
                 return null;
@@ -272,46 +283,8 @@ public String getValueOf(String key) throws IOException {
     }
     public static void main(String[] args) throws IOException, InterruptedException {
         LSMTree lsmTree = new LSMTree(5007,788,5,10);
-        lsmTree.setValueOf("1","a");
-        lsmTree.setValueOf("2","2");
-        lsmTree.setValueOf("2","3");
-        lsmTree.setValueOf("4","4");
-        lsmTree.setValueOf("5","5");
-        lsmTree.setValueOf("6","I'm here");
-        lsmTree.setValueOf("7","7");
-        lsmTree.setValueOf("8","8");
-        lsmTree.setValueOf("9","9");
-        lsmTree.setValueOf("10","10");
-        lsmTree.setValueOf("1","11");
-        lsmTree.setValueOf("12","12");
-        lsmTree.setValueOf("13","13");
-        lsmTree.setValueOf("14","14");
-        lsmTree.setValueOf("15","15");
-        lsmTree.setValueOf("16","16");
-        lsmTree.setValueOf("17","17");
-        lsmTree.setValueOf("18","18");
-        lsmTree.setValueOf("19","19");
-        lsmTree.setValueOf("20","20");
-        lsmTree.setValueOf("21","21");
-        lsmTree.setValueOf("22","22");
-        lsmTree.setValueOf("23","23");
-        lsmTree.setValueOf("24","24");
-        lsmTree.setValueOf("25","25");
-        lsmTree.setValueOf("26","26");
-        lsmTree.setValueOf("27","27");
-        lsmTree.setValueOf("28","28");
-        lsmTree.setValueOf("29","29");
-        lsmTree.setValueOf("30","30");
-        lsmTree.setValueOf("31","31");
-        lsmTree.setValueOf("32","32");
-        lsmTree.setValueOf("33","33");
-        lsmTree.setValueOf("34","34");
-        lsmTree.setValueOf("35","35");
-        lsmTree.setValueOf("36","36");
-        lsmTree.setValueOf("37","37");
-        lsmTree.setValueOf("38","38");
-        lsmTree.setValueOf("39","39");
-        lsmTree.setValueOf("40","40");
+        lsmTree.setValueOf("key1","value1");
+        System.out.println(lsmTree.getValueOf("6"));
 
     }
 
