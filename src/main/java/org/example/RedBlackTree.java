@@ -119,7 +119,7 @@ public class RedBlackTree<T extends Comparable<T>> {
     }
 
     public T search(T key) {
-        if (search(root, key) != null)
+            if (search(root, key) != null)
             return search(root, key).getValue();
         else
             return null;

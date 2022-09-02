@@ -1,9 +1,11 @@
 package org.example;
 
 import java.util.*;
-import org.apache.commons.codec.digest.MurmurHash3;
 
+import com.cloudimpl.outstack.common.Pair;
+import org.apache.commons.codec.digest.MurmurHash3;
 public class RingStructure {
+    public static List<Integer> addedNode;
     int numberOfNodes, numberOfVirtualNodes, replicationFactor;
     Map<Integer,Integer> nodes_Ports = new HashMap<>();
     NodesReplicasMapping nodesReplicasMapping;
@@ -51,45 +53,60 @@ public class RingStructure {
     }
     //5000 get numberOf nodes then number of virtual nodes
     // fixed to 10
-     List<Integer> keys= new ArrayList<>();
+    static List<Integer> keys = new ArrayList<>();
     void buildMap(int numberOfVirtualNodes) {
+        final char startingSymbol = 'a';
+
         for (int i = 1; i <= numberOfNodes; i++) {
-            int amp = 414248133;
+            char prefix = (char)((int)startingSymbol + i);
             for (int j = 0; j < numberOfVirtualNodes; j++) {
-                amp += 87187;
+                String postfix = String.valueOf(j);
                 int portNumber = 5000 + i;
-                String string = Integer.toString(amp).concat(Integer.toString(portNumber));
-                int hashed = MurmurHash3.hash32x86(string.getBytes());
+                String vnName = prefix + postfix;
+                int hashed = MurmurHash3.hash32x86(vnName.getBytes());
                 keys.add(hashed);
-                nodes_Ports.put(hashed,portNumber);
+                nodes_Ports.put(hashed, portNumber);
             }
         }
         Collections.sort(keys);
     }
     void addNode(){
+        addedNode = new ArrayList<>();
         for (int j = 0; j < numberOfVirtualNodes; j++) {
-            int amp = 87187*numberOfNodes;
+            int amp = 87187 * numberOfNodes;
             numberOfNodes++;
             int portNumber = 5000 + numberOfNodes;
             String string = Integer.toString(amp).concat(Integer.toString(portNumber*7979));
             int hashed = MurmurHash3.hash32x86(string.getBytes());
             keys.add(hashed);
+            addedNode.add(hashed);
             nodes_Ports.put(hashed,portNumber);
         }
         Collections.sort(keys);
+        Collections.sort(addedNode);
         nodesReplicasMapping.addNode();
         //Here we should stop the modified section in the ring structure and move the data from one node to the other
-
     }
 
     public static void main(String[] args) {
-        RingStructure ringStructure = RingStructure.getInstance(5,5,3);
-        ringStructure.buildMap(5);
-        System.out.println(ringStructure.nodes_Ports);
-        System.out.println(ringStructure.keys);
-        System.out.println(ringStructure.find_Node(10));
+        RingStructure ns = new RingStructure(5, 20, 3);
+        ns.buildMap(20);
+        System.out.println("**************************************");
     }
-
+    public static ArrayList<ArrayList<String>> ranges() {
+        ArrayList<ArrayList<String>> ranges = new ArrayList<>();
+        for (Integer end : addedNode) {
+            int inx = keys.indexOf(end);
+            if (inx == 0) {
+                inx = keys.size() - 1;
+            } else {
+                inx = inx - 1;
+            }
+            Integer start = keys.get(inx);
+            ranges.add(new ArrayList<>(Arrays.asList(start.toString(), end.toString())));
+        }
+        return ranges;
+    }
     public int getNumberOfNodes() {
         return this.numberOfNodes;
     }
