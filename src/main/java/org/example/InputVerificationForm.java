@@ -438,11 +438,9 @@ public class InputVerificationForm extends JPanel {
         JComponent newContentPane = new InputVerificationForm();
         newContentPane.setOpaque(true); //content panes must be opaque
 
-        // add start button
         JButton startButton = new JButton("Start");
         JButton addButton = new JButton("Add Node");
         addButton.setEnabled(false);
-        //startButton.addActionListener( e -> storeFields() );
         startButton.addActionListener( e -> {
             try {
                 Admin.startServers(getFields());

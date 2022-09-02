@@ -27,8 +27,7 @@ public class NodesReplicasMapping {
         for (int i = 0; i < replicationFactor-1; i++) {
           changedNodes.add(startingPortNumber+i);
         }
-        changedNodes.add(startingPortNumber+replicationFactor);
-
+        changedNodes.add(startingPortNumber+numberOfNodes-1);
 
     }
     public void printChangedNodes(){

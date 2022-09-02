@@ -4,14 +4,6 @@ import java.util.*;
 import org.apache.commons.codec.digest.MurmurHash3;
 
 public class RingStructure {
-/**
- * n case of using all in all topology do the following.
- * Using replicas in the routing function
- *
- *     We have a replicas map of nodes and their replicas (port -> array of ports).
- *     Change nodes_Ports map from <Integer, Integer> to <Integer, List>
- *     Use the value of nodes_Ports map as a key in the replicas map to get the replicas ports and then appends it to the List
- * */
     int numberOfNodes, numberOfVirtualNodes, replicationFactor;
     Map<Integer,Integer> nodes_Ports = new HashMap<>();
     NodesReplicasMapping nodesReplicasMapping;
@@ -66,7 +58,7 @@ public class RingStructure {
             for (int j = 0; j < numberOfVirtualNodes; j++) {
                 amp += 87187;
                 int portNumber = 5000 + i;
-                String string = Integer.toString(amp).concat(Integer.toString(portNumber*7979));
+                String string = Integer.toString(amp).concat(Integer.toString(portNumber));
                 int hashed = MurmurHash3.hash32x86(string.getBytes());
                 keys.add(hashed);
                 nodes_Ports.put(hashed,portNumber);

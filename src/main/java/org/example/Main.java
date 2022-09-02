@@ -1,5 +1,7 @@
 package org.example;
 
+import org.apache.commons.codec.digest.MurmurHash3;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
@@ -125,15 +127,20 @@ public class Main {
 
 
     public static void main(String[] args) throws IOException {
-        for (int i = 1; i <= nextSegmentID; i++) {
-            segmentIDs.add(i);
-        }
-       mergeCompaction();
-        System.out.println(nextSegmentID);
-        for (int i = 0; i < segmentIDs.size(); i++) {
-            System.out.println(segmentIDs.get(i));
-        }
-        System.out.println(nextSegmentID);
+        System.out.println("Hello World!");
+        int hashCode = MurmurHash3.hash32x86("a".getBytes());
+        System.out.println(hashCode);
+        int hashCode2 = MurmurHash3.hash32x86("b".getBytes());
+        System.out.println(MurmurHash3.hash32x86("b".getBytes()));
+        System.out.println(MurmurHash3.hash32x86("c".getBytes()));
+        System.out.println(MurmurHash3.hash32x86("d".getBytes()));
+        System.out.println(MurmurHash3.hash32x86("e".getBytes()));
+        System.out.println(MurmurHash3.hash32x86("5001".getBytes()));
+        System.out.println(MurmurHash3.hash32x86("5002".getBytes()));
+
+
+
+
     }
 
 

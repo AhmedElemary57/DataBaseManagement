@@ -294,6 +294,7 @@ public class Server {
                 }else if (request.startsWith("addNode")){
                     ringStructure.addNode();
                     ringStructure.nodesReplicasMapping.printWhichReplicasBelongToNode();
+                    ringStructure.nodesReplicasMapping.printChangedNodes();
                 }
                 System.out.println(request);
             }
