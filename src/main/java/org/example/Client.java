@@ -68,5 +68,22 @@ public class Client {
 
          }
 
+    public static void main(String[] args) {
+        Client client = new Client(5000,6);
+        Random random = new Random();
+        for (int i = 0; i < 1000; i++) {
+            try {
+                String answer = client.sendRequest(String.valueOf(random.nextInt(100)), String.valueOf(random.nextInt(10000)), true);
+                System.out.println(answer);
+                Thread.sleep(100);
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+
+        }
+    }
 
 }

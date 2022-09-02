@@ -67,8 +67,11 @@ public class Rehash {
             String end = ranges.get(i).get(1);
             int startInx = findIndex(keys, start);
             int endInx = findIndex(keys, end);
-            for (int j = startInx; j <= endInx; j++) {
-                newFileWriter.write(keys.get(j) + "," + values.get(i) + "\n");
+
+            System.out.println("startInx: " + startInx + " endInx: " + endInx);
+            System.out.println(keys.size());
+            for (int j = startInx; j <= endInx && j >= 0 && j<keys.size(); j++) {
+                newFileWriter.write(keys.get(j) + "," + values.get(j) + "\n");
             }
         }
     }
@@ -78,7 +81,7 @@ public class Rehash {
         if (listOfFiles != null) {
             for (int i = 0; i < listOfFiles.length; i++) {
                 if (listOfFiles[i].isFile()) {
-                    createNewSegment(ranges,newNodePath,listOfFiles[i].getName().split("\\.")[0],listOfFiles[i].getPath());
+                    createNewSegment(RingStructure.ranges(),newNodePath,listOfFiles[i].getName().split("\\.")[0],listOfFiles[i].getPath());
                 }
             }
         }

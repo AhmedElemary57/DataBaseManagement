@@ -5,9 +5,9 @@ import java.util.*;
 import com.cloudimpl.outstack.common.Pair;
 import org.apache.commons.codec.digest.MurmurHash3;
 public class RingStructure {
-    public static List<Integer> addedNode;
+    public static List<Long> addedNode;
     int numberOfNodes, numberOfVirtualNodes, replicationFactor;
-    Map<Integer,Integer> nodes_Ports = new HashMap<>();
+    Map<Long,Integer> nodes_Ports = new HashMap<>();
     NodesReplicasMapping nodesReplicasMapping;
 
     private volatile static RingStructure uniqueInstance;
@@ -32,13 +32,15 @@ public class RingStructure {
         return uniqueInstance;
     }
 
-     int find_Node(int K) {
+    //find the node which has the replica
+
+     long find_Node(long K) {
         // Lower and upper bounds
         int start = 0;
-        int end = numberOfNodes - 1;
+        int end = keys.size()-1;
         // Traverse the search space
         while (start <= end) {
-            int mid = (start + end) / 2;
+            int mid = start+(end-start)/ 2;
             // If K is found
             if (keys.get(mid) == K)
                 return mid;
@@ -47,23 +49,21 @@ public class RingStructure {
             else
                 end = mid - 1;
         }
-
         // Return insert position
-        return keys.get((end + 1)%this.numberOfNodes);
+        return keys.get((end + 1));
     }
     //5000 get numberOf nodes then number of virtual nodes
     // fixed to 10
-    static List<Integer> keys = new ArrayList<>();
+    static List<Long> keys = new ArrayList<>();
     void buildMap(int numberOfVirtualNodes) {
         final char startingSymbol = 'a';
-
         for (int i = 1; i <= numberOfNodes; i++) {
             char prefix = (char)((int)startingSymbol + i);
             for (int j = 0; j < numberOfVirtualNodes; j++) {
                 String postfix = String.valueOf(j);
                 int portNumber = 5000 + i;
                 String vnName = prefix + postfix;
-                int hashed = MurmurHash3.hash32x86(vnName.getBytes());
+                long hashed = MurmurHash3.hash32x86(vnName.getBytes());
                 keys.add(hashed);
                 nodes_Ports.put(hashed, portNumber);
             }
@@ -77,7 +77,7 @@ public class RingStructure {
             numberOfNodes++;
             int portNumber = 5000 + numberOfNodes;
             String string = Integer.toString(amp).concat(Integer.toString(portNumber*7979));
-            int hashed = MurmurHash3.hash32x86(string.getBytes());
+            long hashed = MurmurHash3.hash32x86(string.getBytes());
             keys.add(hashed);
             addedNode.add(hashed);
             nodes_Ports.put(hashed,portNumber);
@@ -91,18 +91,24 @@ public class RingStructure {
     public static void main(String[] args) {
         RingStructure ns = new RingStructure(5, 20, 3);
         ns.buildMap(20);
-        System.out.println("**************************************");
+        System.out.println(ns.keys);
+        for(Map.Entry<Long,Integer> entry : ns.nodes_Ports.entrySet()){
+            System.out.println(entry.getKey() + " " + entry.getValue());
+        }
+
+
     }
+
     public static ArrayList<ArrayList<String>> ranges() {
         ArrayList<ArrayList<String>> ranges = new ArrayList<>();
-        for (Integer end : addedNode) {
+        for (Long end : addedNode) {
             int inx = keys.indexOf(end);
             if (inx == 0) {
                 inx = keys.size() - 1;
             } else {
                 inx = inx - 1;
             }
-            Integer start = keys.get(inx);
+            Long start = keys.get(inx);
             ranges.add(new ArrayList<>(Arrays.asList(start.toString(), end.toString())));
         }
         return ranges;

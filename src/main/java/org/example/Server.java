@@ -159,13 +159,15 @@ public class Server {
         String data = request.substring(4, request.length() - 1);
         String key = data.split(",")[0];
         String value = data.split(",")[1];
+        System.out.println("key = " + key);
+        System.out.println("value = " + value);
 
         // Hash the key.
-        int hashCode = MurmurHash3.hash32x86(key.getBytes());
+        long hashCode = MurmurHash3.hash32x86(key.getBytes());
         System.out.println("Hash Code is : " + hashCode);
 
         // Get the virtual node and its main partitionID (port number).
-        int vnIndex = ringStructure.find_Node(hashCode);
+        Long vnIndex = ringStructure.find_Node(hashCode);
         System.out.println("Virtual Node Index = " + vnIndex);
         int neededPortNumber = ringStructure.nodes_Ports.get(vnIndex);
         System.out.println("Correct Node Port : ------->" + neededPortNumber);
@@ -200,9 +202,9 @@ public class Server {
     static void get(String request, int currentPortNumber, Socket sender, List<LSMTree> lsmTrees, boolean withQuorum, int readQuorum) throws IOException, InterruptedException {
         String data = request.substring(4, request.length() - 1);
         String key = data.split(",")[0];
-        int hashCode = MurmurHash3.hash32x86(key.getBytes());
+        long hashCode = MurmurHash3.hash32x86(key.getBytes());
         System.out.println("Hash Code is : " + hashCode);
-        int nodeIndexOnRing = ringStructure.find_Node(hashCode);
+        Long nodeIndexOnRing = ringStructure.find_Node(hashCode);
         System.out.println("Get index in correspond Node : " + nodeIndexOnRing);
         int neededPortNumber = ringStructure.nodes_Ports.get(nodeIndexOnRing);
         System.out.println("Correct Node Port : ------->" + neededPortNumber);
