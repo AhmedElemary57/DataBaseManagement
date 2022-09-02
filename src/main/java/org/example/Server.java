@@ -1,13 +1,10 @@
 package org.example;
 
 import org.apache.commons.codec.digest.MurmurHash3;
-import org.example.Tests.Rehash;
 
 import java.net.*;
 import java.io.*;
 import java.util.*;
-
-import static org.example.Client.START_PORT;
 
 
 public class Server {

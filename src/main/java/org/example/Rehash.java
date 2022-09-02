@@ -1,4 +1,4 @@
-package org.example.Tests;
+package org.example;
 
 import com.amazonaws.services.s3.internal.ObjectExpirationHeaderHandler;
 import org.example.RingStructure;
