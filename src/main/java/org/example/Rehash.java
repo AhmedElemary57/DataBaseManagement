@@ -36,6 +36,16 @@ public class Rehash {
     public static void deleteOldSegment(ArrayList<ArrayList<String>> ranges) {
 
     }
+    static boolean isInRange(String key, ArrayList<ArrayList<String>> ranges) {
+        for (int i = 0; i < ranges.size(); i++) {
+            String start = ranges.get(i).get(0);
+            String end = ranges.get(i).get(1);
+            if (key.compareTo(start) >= 0 && key.compareTo(end) <= 0) {
+                return true;
+            }
+        }
+        return false;
+    }
     /**
      * @param ranges : List of pairs represents the ranges (start, end).
      * @param newNodePath : The path of the ssTable file for the new node.
@@ -45,10 +55,7 @@ public class Rehash {
     public static void createNewSegment(ArrayList<ArrayList<String>> ranges, String newNodePath, String newSegmentName, String segmentPath) throws IOException {
 
         File oldFile = new File(segmentPath);
-        File newFile = new File(newNodePath);
-        if (!newFile.exists()) {
-            newFile.mkdirs();
-        }
+
 
         Scanner myReader = new Scanner(oldFile);
         List<String> keys=new ArrayList<>();
@@ -56,25 +63,28 @@ public class Rehash {
         while (myReader.hasNextLine()){
             String line = myReader.nextLine();
             String[] keyValue = line.split(",");
-            keys.add(keyValue[0]);
-            values.add(keyValue[1]);
-        }
-        myReader.close();
-
-        FileWriter newFileWriter = new FileWriter(newFile+"/"+newSegmentName+".txt", true);
-        for (int i = 0; i < ranges.size(); i++) {
-            String start = ranges.get(i).get(0);
-            String end = ranges.get(i).get(1);
-            int startInx = findIndex(keys, start);
-            int endInx = findIndex(keys, end);
-
-            System.out.println("startInx: " + startInx + " endInx: " + endInx);
-            System.out.println(keys.size());
-            for (int j = startInx; j <= endInx && j >= 0 && j<keys.size(); j++) {
-                newFileWriter.write(keys.get(j) + "," + values.get(j) + "\n");
+            if (isInRange( keyValue[0], ranges)) {
+                keys.add(keyValue[0]);
+                values.add(keyValue[1]);
             }
         }
+        myReader.close();
+        if (keys.size() == 0) {
+            return;
+        }
+        File newFile = new File(newNodePath);
+        if (!newFile.exists()) {
+            newFile.mkdirs();
+        }
+        FileWriter newFileWriter = new FileWriter(newFile+"/"+newSegmentName+".txt", true);
+        for (int i = 0; i < keys.size(); i++) {
+
+            newFileWriter.write(keys.get(i) + "," + values.get(i) + "\n");
+
+        }
+        newFileWriter.close();
     }
+
     public static void createNewPartition(String newNodePath, String oldNewPath) throws IOException {
         File folder = new File(oldNewPath);
         File[] listOfFiles = folder.listFiles();
@@ -88,11 +98,11 @@ public class Rehash {
     }
     public static void main(String[] args) {
         ranges = new ArrayList<>();
-        ranges.add(new ArrayList<>(Arrays.asList("key15", "key19")));
-        ranges.add(new ArrayList<>(Arrays.asList("key30", "key35")));
-        ranges.add(new ArrayList<>(Arrays.asList("key80", "key85")));
 
-        String oldNodePath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ 3 +"/ReplicaOf"+3+"/Data/";
+
+        ranges.add(new ArrayList<>(Arrays.asList(" -1356719865", "2046836901")));
+
+        String oldNodePath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ 5003 +"/ReplicaOf"+5003+"/Data/";
         String newNodePath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ 5017 +"/ReplicaOf"+5017+"/Data/";
         try {
             createNewPartition(newNodePath,oldNodePath);

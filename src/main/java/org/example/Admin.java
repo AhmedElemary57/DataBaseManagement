@@ -20,7 +20,8 @@ public class Admin {
                     " " + data.get(4) + " " + data.get(5) + " " + data.get(6) + "; exec bash\"\n" +
                     "done\n");
             myWriter.close();
-            count = 6;
+            count = data.get(0);
+            Server.sendToPort(5000, "start " + data.get(0), false);
         } catch (IOException e) {
             System.out.println("An error occurred.");
             e.printStackTrace();
@@ -41,8 +42,9 @@ public class Admin {
             myWriter.close();
 
             for (int i = 1; i < count ; i++) {
-                Server.sendToPort(5000+i,"addNode "+(5000+count), false);
+                Server.sendToPort(5000 + i,"addNode "+ (5000 + count), false);
             }
+            Server.sendToPort(5000,"addNode "+ (5000 + count), false);
             count++;
         } catch (IOException e) {
             System.out.println("An error occurred.");

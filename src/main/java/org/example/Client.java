@@ -66,24 +66,28 @@ public class Client {
             return "Server is not available";
         }
 
-         }
-
-    public static void main(String[] args) {
-        Client client = new Client(5000,6);
-        Random random = new Random();
-        for (int i = 0; i < 1000; i++) {
+    }
+    Thread thread = new Thread(new Runnable() {
+        @Override
+        public void run() {
             try {
-                String answer = client.sendRequest(String.valueOf(random.nextInt(100)), String.valueOf(random.nextInt(10000)), true);
-                System.out.println(answer);
-                Thread.sleep(100);
+                Scanner scanner = new Scanner(System.in);
+                while (true) {
+                    System.out.println("Enter the key");
+                    String key = scanner.nextLine();
+                    System.out.println("Enter the value");
+                    String value = scanner.nextLine();
+                    String answer = sendRequest(key, value, true);
+                    System.out.println("Client received: " + answer);
+                }
             } catch (IOException e) {
                 e.printStackTrace();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
             }
-
-
         }
+    });
+
+    public static void main(String[] args) {
+
     }
 
 }
