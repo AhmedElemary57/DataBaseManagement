@@ -17,7 +17,7 @@ import static java.lang.Thread.sleep;
 public class LSMTree {
     Integer nodeNumber,replicaId,nextSegmentID;
     int maxMemeTableSize, memTableSize,segmentNumber,versionNumber,maxSegmentSize;
-    List<Integer> segmentIDs;
+    List<String> segmentIDs;
     RedBlackTree<String> memTable;
     Map<String,String> rowCache;
     BloomFilter<String> bloomFilter ;
@@ -49,7 +49,7 @@ public class LSMTree {
         if (listOfFiles != null) {
             for (int i = 0; i < listOfFiles.length; i++) {
                 if (listOfFiles[i].isFile()) {
-                    segmentIDs.add(Integer.parseInt(listOfFiles[i].getName().split("\\.")[0]));
+                    segmentIDs.add(listOfFiles[i].getName().split("\\.")[0]);
                 }
             }
         }
@@ -63,21 +63,23 @@ public class LSMTree {
     }
 
     public void mergeCompaction() throws IOException {
-        diskPath=  "/home/elemary/Projects/DataBaseManagement/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
-        int nextSegmentID=segmentNumber,maxSize=maxSegmentSize;
+        String replicaPath=  "/home/elemary/Projects/DataBaseManagement/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/Data/";
+
+        int maxSize=maxSegmentSize;
+        System.out.println("segmentNumber " + nextSegmentID );
         int tempID=1,size=0,counter;
         boolean i=false,j=false;
         if(nextSegmentID%2==1)counter=nextSegmentID-1;
         else counter=nextSegmentID;
         for(int k=0;k<counter;k+=2){
-            String file1name=diskPath+String.valueOf(k+1)+".txt";
-            String file2name=diskPath+String.valueOf(k+2)+".txt";
+            String file1name=replicaPath+String.valueOf(k+1)+".txt";
+            String file2name=replicaPath+String.valueOf(k+2)+".txt";
             File myObj = new File(file1name);
             File myObj2 = new File(file2name);
-            File temp = new File(diskPath+"t"+String.valueOf(tempID)+".txt");
+            File temp = new File(replicaPath+"t"+String.valueOf(tempID)+".txt");
             Scanner myReader = new Scanner(myObj);
             Scanner myReader2 = new Scanner(myObj2);
-            FileWriter myWriter = new FileWriter(diskPath+"t"+String.valueOf(tempID)+".txt",true);
+            FileWriter myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
             String data=myReader.nextLine(),data2=myReader2.nextLine();
 
             String key1,key2;
@@ -107,7 +109,7 @@ public class LSMTree {
                 if(size>=maxSize){
                     myWriter.close();
                     tempID++;
-                    myWriter = new FileWriter(diskPath+"t"+String.valueOf(tempID)+".txt",true);
+                    myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
                     size=0;
                 }
             }
@@ -117,7 +119,7 @@ public class LSMTree {
             if(size>=maxSize){
                 myWriter.close();
                 tempID++;
-                myWriter = new FileWriter(diskPath+"t"+String.valueOf(tempID)+".txt",true);
+                myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
                 size=0;
             }
             while (myReader.hasNextLine()){
@@ -127,7 +129,7 @@ public class LSMTree {
                 if(size>=maxSize){
                     myWriter.close();
                     tempID++;
-                    myWriter = new FileWriter(diskPath+"t"+String.valueOf(tempID)+".txt",true);
+                    myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
                     size=0;
                 }
             }
@@ -138,7 +140,7 @@ public class LSMTree {
                 if(size>=maxSize){
                     myWriter.close();
                     tempID++;
-                    myWriter = new FileWriter(diskPath+"t"+String.valueOf(tempID)+".txt",true);
+                    myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
                     size=0;
                 }
             }
@@ -159,20 +161,25 @@ public class LSMTree {
         segmentIDs.clear();
         System.out.println(tempID);
         for (int k = 1; k < tempID; k++) {
-            File file = new File(diskPath+"t"+String.valueOf(k)+".txt");
-            File rename = new File(diskPath+String.valueOf(k)+".txt");
+            File file = new File(replicaPath+"t"+String.valueOf(k)+".txt");
+            File rename = new File(replicaPath+String.valueOf(k)+".txt");
             file.renameTo(rename);
-            segmentIDs.add(k);
+            segmentIDs.add(String.valueOf(k));
         }
-        segmentIDs.add(tempID);
-        if(new File(diskPath+"t"+String.valueOf(tempID)+".txt").exists())
-            new File(diskPath+"t"+String.valueOf(tempID)+".txt").delete();
+        segmentIDs.add(String.valueOf(tempID));
+        if(new File(replicaPath+"t"+String.valueOf(tempID)+".txt").exists())
+            new File(replicaPath+"t"+String.valueOf(tempID)+".txt").delete();
         if(nextSegmentID==1){
-            File file = new File(diskPath+String.valueOf(counter+1)+".txt");
-            File rename = new File(diskPath+String.valueOf(tempID)+".txt");
+            File file = new File(replicaPath+String.valueOf(counter+1)+".txt");
+            File rename = new File(replicaPath+String.valueOf(tempID)+".txt");
             file.renameTo(rename);
+            segmentNumber=tempID;
         }
-        segmentNumber=tempID;
+        else {
+            segmentNumber=tempID-1;
+        }
+
+
     }
     public String getValueOf(String key) throws IOException {
         // print row cache
@@ -188,7 +195,7 @@ public class LSMTree {
         if (memTable.search(key)!=null){
             return value;
         } else {
-            if (bloomFilter.mightContain(key) || withCrashRecovery){// TODO FIX BLOOM FILTER in case of crash recovery we should check if the key is present in the bloom filter
+            if (bloomFilter.mightContain(key) || withCrashRecovery){
                 value = getValueFromSSTable(key,segmentIDs.size());
                 rowCache.put(key, value);
                 return value;
@@ -213,7 +220,7 @@ public class LSMTree {
         }
         if (memTableSize>=maxMemeTableSize){
             flushToDisk();
-            segmentIDs.add(segmentNumber);
+            segmentIDs.add(String.valueOf(segmentNumber));
             memTableSize=0;
             memTable.clear();
         }
@@ -233,20 +240,19 @@ public class LSMTree {
         }
     }
     void flushToDisk() throws IOException {
-        segmentNumber++;
-        nextSegmentID=segmentNumber;
+        nextSegmentID++;
         String fileName = nextSegmentID+".txt";
         List<Node<String>> nodesOfRedBlackTree = memTable.inOrderTraversal();
-        File file = new File(diskPath+"/Data/");
+        File file = new File(diskPath+"Data/");
         if (!file.exists()) {
             file.mkdirs();
         }
-        FileWriter fileWriter = new FileWriter(diskPath+"/Data/"+fileName);
+        FileWriter fileWriter = new FileWriter(diskPath+"Data/"+fileName);
         for (Node<String> node : nodesOfRedBlackTree) {
             fileWriter.write(node.getKey()+","+node.getValue()+'\n');
             versionNumber++;
         }
-        String path = diskPath+"commitLog"+nodeNumber+".txt";
+        String path = diskPath+"commitLog"+replicaId+".txt";
         File commitFile = new File(path);
         commitFile.delete();
         fileWriter.close();
@@ -271,7 +277,7 @@ public class LSMTree {
         if (fromSegment==0){
             return null;
         }String segmentName = segmentIDs.get(fromSegment - 1) +".txt";
-        File file = new File(diskPath+"/Data/"+segmentName);
+        File file = new File(diskPath+"Data/"+segmentName);
         Scanner myReader = new Scanner(file);
         List<String> lines = new ArrayList<>();
         while (myReader.hasNextLine()) {
@@ -285,10 +291,22 @@ public class LSMTree {
         }
         return getValueFromSSTable(key,fromSegment-1);
     }
+    void startCompaction() throws IOException, InterruptedException {
+            System.out.println("Compaction Started");
+            CompactionThread compactionThread = new CompactionThread(this);
+            //compactionThread.start();
+            System.out.println("Compaction Finished");
+        }
+
     public static void main(String[] args) throws IOException, InterruptedException {
-        LSMTree lsmTree = new LSMTree(5007,788,5,10, true);
-        lsmTree.setValueOf("key1","value1");
-        System.out.println(lsmTree.getValueOf("6"));
+        LSMTree lsmTree = new LSMTree(5005,5005,5,10, true);
+        lsmTree.segmentNumber=4;
+        lsmTree.segmentIDs=new ArrayList<>();
+        lsmTree.segmentIDs.add("1");
+        lsmTree.segmentIDs.add("2");
+        lsmTree.segmentIDs.add("3");
+        lsmTree.segmentIDs.add("4");
+        lsmTree.startCompaction();
 
     }
 

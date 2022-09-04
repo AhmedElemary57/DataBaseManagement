@@ -1,5 +1,6 @@
 package org.example;
 
+import org.apache.commons.codec.digest.MurmurHash3;
 import org.example.RingStructure;
 
 import java.io.File;
@@ -52,23 +53,33 @@ public class Rehash {
      *
      */
     public static void createNewSegment(ArrayList<ArrayList<String>> ranges, String newNodePath, String newSegmentName, String segmentPath) throws IOException {
-
+        System.out.println("Creating Segment"+newSegmentName);
         File oldFile = new File(segmentPath);
 
 
         Scanner myReader = new Scanner(oldFile);
-        List<String> keys=new ArrayList<>();
-        List<String> values= new ArrayList<>();
+
+        RedBlackTree<String> redBlackTree=new RedBlackTree();
+        List<String> recordsRemain=new ArrayList<>();
         while (myReader.hasNextLine()){
             String line = myReader.nextLine();
             String[] keyValue = line.split(",");
-            if (isInRange( keyValue[0], ranges)) {
-                keys.add(keyValue[0]);
-                values.add(keyValue[1]);
+            String hashedValue = String.valueOf(Long.valueOf(MurmurHash3.hash32x86(keyValue[0].getBytes())));
+            if (isInRange( hashedValue, ranges)) {
+                redBlackTree.insert(keyValue[0],keyValue[1]);
+            }
+            else {
+                recordsRemain.add(line);
             }
         }
         myReader.close();
-        if (keys.size() == 0) {
+        oldFile.delete();
+        FileWriter oldSegmentWriter = new FileWriter(oldFile);
+        for (String record:recordsRemain) {
+            oldSegmentWriter.write(record+"\n");
+        }
+        oldSegmentWriter.close();
+        if (redBlackTree.size() == 0) {
             return;
         }
         File newFile = new File(newNodePath);
@@ -76,10 +87,10 @@ public class Rehash {
             newFile.mkdirs();
         }
         FileWriter newFileWriter = new FileWriter(newFile+"/"+newSegmentName+".txt", true);
-        for (int i = 0; i < keys.size(); i++) {
-
-            newFileWriter.write(keys.get(i) + "," + values.get(i) + "\n");
-
+        List<Node<String>> keyValue=redBlackTree.inOrderTraversal();
+        for (int i = 0; i < keyValue.size(); i++) {
+            System.out.println(keyValue.get(i).getKey() + "," + keyValue.get(i).getValue());
+            newFileWriter.write(keyValue.get(i).getKey() + "," + keyValue.get(i).getValue() + "\n");
         }
         newFileWriter.close();
     }
@@ -88,19 +99,18 @@ public class Rehash {
         File folder = new File(oldNewPath);
         File[] listOfFiles = folder.listFiles();
         if (listOfFiles != null) {
+            ArrayList<ArrayList<String>> ranges=RingStructure.ranges();
             for (int i = 0; i < listOfFiles.length; i++) {
                 if (listOfFiles[i].isFile()) {
-                    createNewSegment(RingStructure.ranges(),newNodePath,listOfFiles[i].getName().split("\\.")[0],listOfFiles[i].getPath());
+                    listOfFiles[i].getName();
+                    createNewSegment(ranges,newNodePath,Server.currentPortNumber+"-"+String.valueOf(i+1),listOfFiles[i].getPath());
                 }
             }
         }
     }
     public static void main(String[] args) {
         ranges = new ArrayList<>();
-
-
-        ranges.add(new ArrayList<>(Arrays.asList(" -1356719865", "2046836901")));
-
+        ranges.add(new ArrayList<>(Arrays.asList("key19", "key24")));
         String oldNodePath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ 5003 +"/ReplicaOf"+5003+"/Data/";
         String newNodePath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ 5017 +"/ReplicaOf"+5017+"/Data/";
         try {

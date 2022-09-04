@@ -6,6 +6,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
@@ -126,17 +129,29 @@ public class Main {
 
 
 
+
+    //Move folder to another folder with its content
+    public static void moveFolder(File source, File destination) throws IOException {
+        if (source.isDirectory()) {
+            if (!destination.exists()) {
+                destination.mkdir();
+            }
+            String files[] = source.list();
+            for (String file : files) {
+                File srcFile = new File(source, file);
+                File destFile = new File(destination, file);
+                moveFolder(srcFile, destFile);
+            }
+        } else {
+            Files.move(Paths.get(source.getPath()), Paths.get(destination.getPath()), StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
     public static void main(String[] args) throws IOException {
-        System.out.println("Hello World!");
-        int hashCode = MurmurHash3.hash32x86("a".getBytes());
-        System.out.println(hashCode);
-        int hashCode2 = MurmurHash3.hash32x86("b".getBytes());
-        System.out.println(MurmurHash3.hash32x86("b".getBytes()));
-        System.out.println(MurmurHash3.hash32x86("c".getBytes()));
-        System.out.println(MurmurHash3.hash32x86("d".getBytes()));
-        System.out.println(MurmurHash3.hash32x86("e".getBytes()));
-        System.out.println(MurmurHash3.hash32x86("5001".getBytes()));
-        System.out.println(MurmurHash3.hash32x86("5002".getBytes()));
+        String replicaName="/home/elemary/Projects/DataBaseManagement/Node_Number"+5001+"/ReplicaOf"+5005+"/Data/";
+        String newLocation="/home/elemary/Projects/DataBaseManagement/Node_Number"+5006+"/ReplicaOf"+5005+"/Data";
+        File srcFile = new File(replicaName);
+        File destFile = new File(newLocation);
+        moveFolder(srcFile,destFile);
 
 
 
