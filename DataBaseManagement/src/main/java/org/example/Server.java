@@ -17,6 +17,7 @@ public class Server {
     static String currentValue = "Error 404 Not Found";
     static int currentPortNumber;
     static int replicationFactor;
+    static List<LSMTree> lsmTrees;
 
 
     /**
@@ -99,10 +100,15 @@ public class Server {
         System.out.println("replicasPosition = " + replicasPosition.size());
         List<String> responses = new ArrayList<>();
 
-
         if (replicasPosition.contains(Integer.valueOf(currentPortNumber))){
+            String key = "";
+            String myResponse = "Set successfully";
+            if (request.startsWith("get")){
+                key = request.substring(4,request.length()-1);
+                myResponse = findValueFromPartitions(neededReplicaId ,key );
+            }
             replicasPosition.remove(Integer.valueOf(currentPortNumber));
-            responses.add("Set Successful");
+            responses.add(myResponse);
         }
         List<MultiRequestSend> multiRequestSends = new ArrayList<>();
         List<Thread> threads = new ArrayList<>();
@@ -134,6 +140,7 @@ public class Server {
                 responsesCount.put(response, 1);
             }
         }
+        System.out.println("responsesCount = " + responsesCount);
         for (String key : responsesCount.keySet()) {
 
             if (responsesCount.get(key) >= quorumReadWrite){
@@ -150,16 +157,20 @@ public class Server {
             LSMTree crashRecovery = new LSMTree(currentPortNumber, replicaID,maxMemTableSize, maxSegmentSize, true);
             //get files from Data folder
             File segments = new File("/home/elemary/Projects/DataBaseManagement/Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID+"/Data/");
-            File[] files = segments.listFiles();
             int counter=1;
-            for (File file1 : files) {
-                if (file1.isFile()) {
-                    file1.renameTo(new File("/home/elemary/Projects/DataBaseManagement/Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID+"/Data/"+counter+".txt"));
-                    crashRecovery.segmentIDs.add(file1.getName().split("\\.")[0]);
-                    System.out.println("File name is " + file1.getName());
-                    counter++;
+            if (segments.exists()) {
+                File[] files = segments.listFiles();
+                for (File file1 : files) {
+                    if (file1.isFile()) {
+                        file1.renameTo(new File("/home/elemary/Projects/DataBaseManagement/Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID+"/Data/"+counter+".txt"));
+                        crashRecovery.segmentIDs.add(file1.getName().split("\\.")[0]);
+                        System.out.println("File name is " + file1.getName());
+                        counter++;
+                    }
                 }
+
             }
+
             crashRecovery.nextSegmentID= counter-1;
             System.out.println("Next segment ID = " + crashRecovery.nextSegmentID);
             crashRecovery.segmentNumber= counter-1;
@@ -181,7 +192,7 @@ public class Server {
         return new LSMTree(currentPortNumber, replicaID,maxMemTableSize, maxSegmentSize, true);
 
     }
-    static void set(String request, int currentPortNumber, Socket sender, List<LSMTree> lsmTrees, boolean withQuorum, int writeQuorum) throws IOException, InterruptedException {
+    static void set(String request, int currentPortNumber, Socket sender,boolean withQuorum, int writeQuorum) throws IOException, InterruptedException {
         // Praising Request.
         String data = request.substring(4, request.length() - 1);
         String key = data.split(",")[0];
@@ -193,6 +204,8 @@ public class Server {
         long hashCode = MurmurHash3.hash32x86(key.getBytes());
 
         System.out.println("Hash Code is : " + hashCode);
+        sendToPort(7775,Integer.toString((int) hashCode), false);
+
 
         // Get the virtual node and its main partitionID (port number).
         Long vnIndex = ringStructure.find_Node(hashCode);
@@ -224,13 +237,27 @@ public class Server {
             }
         }
     }
+    static String findValueFromPartitions(int neededPortNumber, String key) throws IOException {
+        String value = "Error 404 Not Found";
+        for (LSMTree lsmTree : lsmTrees) {
+            if (lsmTree.getReplicaId() == neededPortNumber) {
+                value = lsmTree.getValueOf(key);
+                if (value != null) {
+                    return value;
+                }
+            }
+        }
+       return value;
+    }
 
-    static void get(String request, int currentPortNumber, Socket sender, List<LSMTree> lsmTrees, boolean withQuorum, int readQuorum) throws IOException, InterruptedException {
+    static void get(String request, int currentPortNumber, Socket sender, boolean withQuorum, int readQuorum) throws IOException, InterruptedException {
         String data = request.substring(4, request.length() - 1);
         String key = data.split(",")[0];
         long hashCode = MurmurHash3.hash32x86(key.getBytes());
 
         System.out.println("Hash Code is : " + hashCode);
+        sendToPort(7775,Integer.toString((int) hashCode), false);
+
 
 
         Long nodeIndexOnRing = ringStructure.find_Node(hashCode);
@@ -343,7 +370,7 @@ public class Server {
         ringStructure.nodesReplicasMapping.printWhichReplicasBelongToNode();
         System.out.println("Ring Structure is built successfully");
         // Get LSM for every partition
-        List<LSMTree> lsmTrees = new ArrayList<>();
+        lsmTrees= new ArrayList<>();
         Map<Integer, List<Integer>> nodeReplicas = ringStructure.nodesReplicasMapping.whichReplicasBelongToNode;
         for (int i = 0; i < replicationFactor; i++) {
             System.out.println("Replica " + i + " is in port " + nodeReplicas.get(currentPortNumber).get(i));
@@ -355,6 +382,9 @@ public class Server {
                 lsmTrees.add(new LSMTree(currentPortNumber, nodeReplicas.get(currentPortNumber).get(i), maxMemTableSize, maxSegmentSize, withCrashRecovery));
    //             lsmTrees.get(i).startCompaction();
             }
+        }
+        if (currentPortNumber==5001){
+            sendToPort(7777,args[1]+" "+args[2]+" "+args[3], false);
         }
 
         try (ServerSocket serverSocket = new ServerSocket(currentPortNumber)) {
@@ -378,9 +408,9 @@ public class Server {
                     request = request.substring(1);
                 }
                 if (request.startsWith("set")) {
-                    set(request, currentPortNumber, sender, lsmTrees, withQuorum, readQuorum);
+                    set(request, currentPortNumber, sender, withQuorum, readQuorum);
                 } else if (request.startsWith("get")) {
-                    get(request, currentPortNumber, sender, lsmTrees, withQuorum, writeQuorum);
+                    get(request, currentPortNumber, sender, withQuorum, writeQuorum);
                 }else if (request.startsWith("addNode")){
 
                     String finalRequest = request;
