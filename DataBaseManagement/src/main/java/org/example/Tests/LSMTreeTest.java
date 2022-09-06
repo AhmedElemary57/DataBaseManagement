@@ -1,5 +1,6 @@
 package org.example.Tests;
 
+import org.example.CompactionThread;
 import org.example.LSMTree;
 import org.junit.jupiter.api.Test;
 
@@ -50,6 +51,30 @@ class LSMTreeTest {
         for (int i = 0; i < 100; i++) {
             tree.setValueOf("key"+i, "value"+i);
         }
+        for (int i = 0; i < 100; i++) {
+            assertEquals("value"+i, tree.getValueOf("key"+i));
+        }
+    }
+    @Test
+    void testCompaction() throws IOException, InterruptedException {
+
+        LSMTree tree = new LSMTree(408,3,5, 20, true);
+        tree.startCompaction();
+
+        for (int i = 0; i < 100; i++) {
+            tree.setValueOf("key"+i, "value"+i);
+        }
+
+        for (int i = 0; i < 100; i++) {
+            tree.setValueOf("key"+i, "value"+i);
+        }
+        tree.startCompaction();
+
+        for (int i = 0; i < 100; i++) {
+            assertEquals("value"+i, tree.getValueOf("key"+i));
+        }
+        tree.startCompaction();
+
         for (int i = 0; i < 100; i++) {
             assertEquals("value"+i, tree.getValueOf("key"+i));
         }

@@ -14,7 +14,7 @@ public class InputVerificationForm extends JPanel {
     private static final int DEFAULT_NODES = 5;
     private static final int DEFAULT_V_NODES = 20;
     private static final int DEFAULT_REPLICATION = 3;
-    private static final int DEFAULT_MEMTABLE = 10;
+    private static final int DEFAULT_MEMTABLE = 5;
     private static final int DEFAULT_SEGMENT = 10;
     private static final int DEFAULT_WRITE_QUORUM = 2;
     private static final int DEFAULT_READ_QUORUM = 2;

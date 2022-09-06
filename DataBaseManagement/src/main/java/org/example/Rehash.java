@@ -56,11 +56,11 @@ public class Rehash {
         System.out.println("Creating Segment"+newSegmentName);
         File oldFile = new File(segmentPath);
 
-
         Scanner myReader = new Scanner(oldFile);
 
         RedBlackTree<String> redBlackTree=new RedBlackTree();
         List<String> recordsRemain=new ArrayList<>();
+
         while (myReader.hasNextLine()){
             String line = myReader.nextLine();
             String[] keyValue = line.split(",");
@@ -74,6 +74,7 @@ public class Rehash {
         }
         myReader.close();
         oldFile.delete();
+
         FileWriter oldSegmentWriter = new FileWriter(oldFile);
         for (String record:recordsRemain) {
             oldSegmentWriter.write(record+"\n");
@@ -86,6 +87,7 @@ public class Rehash {
         if (!newFile.exists()) {
             newFile.mkdirs();
         }
+
         FileWriter newFileWriter = new FileWriter(newFile+"/"+newSegmentName+".txt", true);
         List<Node<String>> keyValue=redBlackTree.inOrderTraversal();
         for (int i = 0; i < keyValue.size(); i++) {
@@ -95,15 +97,15 @@ public class Rehash {
         newFileWriter.close();
     }
 
-    public static void createNewPartition(String newNodePath, String oldNewPath) throws IOException {
-        File folder = new File(oldNewPath);
+    public static void createNewPartition(String newNodePath, String oldPath) throws IOException {
+        File folder = new File(oldPath);
         File[] listOfFiles = folder.listFiles();
         if (listOfFiles != null) {
             ArrayList<ArrayList<String>> ranges=RingStructure.ranges();
             for (int i = 0; i < listOfFiles.length; i++) {
                 if (listOfFiles[i].isFile()) {
                     listOfFiles[i].getName();
-                    createNewSegment(ranges,newNodePath,Server.currentPortNumber+"-"+String.valueOf(i+1),listOfFiles[i].getPath());
+                    createNewSegment(ranges,newNodePath,Server.currentPortNumber+String.valueOf(i+1),listOfFiles[i].getPath());
                 }
             }
         }

@@ -1,16 +1,10 @@
 package org.example;
 
 import org.apache.commons.codec.digest.MurmurHash3;
-import org.apache.commons.io.FileUtils;
-import static java.nio.file.StandardCopyOption.*;
+
 import java.net.*;
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.*;
-import static java.nio.file.StandardCopyOption.*;
 
 public class Server {
     static RingStructure ringStructure;
@@ -18,6 +12,11 @@ public class Server {
     static int currentPortNumber;
     static int replicationFactor;
     static List<LSMTree> lsmTrees;
+    static int numberOfNodes;
+    static int nodeNumber;
+    static int numberOfVirtualNodes;
+    static int maxSegmentSize;
+    static int maxMemTableSize;
 
 
     /**
@@ -81,10 +80,10 @@ public class Server {
         List<Integer> replicas = ringStructure.nodesReplicasMapping.whichReplicasBelongToNode.get(currentPortNumber);
         for (int replica : replicas) {
             if (replica == partitionID) {
-                return true;
+                return false;
             }
         }
-        return false;
+        return true;
     }
 
     private static int getPositionOfTheReplica(int partitionID) {
@@ -102,7 +101,7 @@ public class Server {
 
         if (replicasPosition.contains(Integer.valueOf(currentPortNumber))){
             String key = "";
-            String myResponse = "Set successfully";
+            String myResponse = "Set Successful";
             if (request.startsWith("get")){
                 key = request.substring(4,request.length()-1);
                 myResponse = findValueFromPartitions(neededReplicaId ,key );
@@ -150,32 +149,23 @@ public class Server {
         }
         return "Error 404 Not Found";
     }
-    static LSMTree crash(int currentPortNumber,int replicaID, int maxMemTableSize, int maxSegmentSize) throws IOException {
+    static LSMTree crash( int replicaID) throws IOException {
         File file = new File("/home/elemary/Projects/DataBaseManagement/Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID);
         if (file.exists()) {
             System.out.println("File exists and need to be reloaded in LSM tree ");
             LSMTree crashRecovery = new LSMTree(currentPortNumber, replicaID,maxMemTableSize, maxSegmentSize, true);
-            //get files from Data folder
             File segments = new File("/home/elemary/Projects/DataBaseManagement/Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID+"/Data/");
-            int counter=1;
             if (segments.exists()) {
                 File[] files = segments.listFiles();
                 for (File file1 : files) {
                     if (file1.isFile()) {
-                        file1.renameTo(new File("/home/elemary/Projects/DataBaseManagement/Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID+"/Data/"+counter+".txt"));
-                        crashRecovery.segmentIDs.add(file1.getName().split("\\.")[0]);
+                        crashRecovery.segmentIDs.add(Integer.valueOf(file1.getName().split("\\.")[0]));
                         System.out.println("File name is " + file1.getName());
-                        counter++;
                     }
                 }
-
             }
 
-            crashRecovery.nextSegmentID= counter-1;
-            System.out.println("Next segment ID = " + crashRecovery.nextSegmentID);
-            crashRecovery.segmentNumber= counter-1;
-            System.out.println("Segment number = " + crashRecovery.segmentNumber);
-
+            //get files from Data folder
             File commitLog = new File("/home/elemary/Projects/DataBaseManagement/Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID+"/"+"commitLog"+replicaID+".txt");
             if (commitLog.exists()) {
                 Scanner myReader = new Scanner(commitLog);
@@ -216,7 +206,7 @@ public class Server {
 
         // Check if current node has a replica.
         String response = "";
-        if (!hasReplica(neededPortNumber, currentPortNumber)) {
+        if (hasReplica(neededPortNumber, currentPortNumber)) {
             System.out.println("I am not in the correct node");
             response = getValueReadWriteQuorum(neededPortNumber, currentPortNumber, request, writeQuorum);
             sendStringToSocket(sender, response);
@@ -255,10 +245,8 @@ public class Server {
         String key = data.split(",")[0];
         long hashCode = MurmurHash3.hash32x86(key.getBytes());
 
-        System.out.println("Hash Code is : " + hashCode);
-        sendToPort(7775,Integer.toString((int) hashCode), false);
-
-
+//        System.out.println("Hash Code is : " + hashCode);
+//        sendToPort(7775,Integer.toString((int) hashCode), false);
 
         Long nodeIndexOnRing = ringStructure.find_Node(hashCode);
         System.out.println("Get index in correspond Node : " + nodeIndexOnRing);
@@ -266,11 +254,12 @@ public class Server {
         System.out.println("Correct Node Port : ------->" + neededPortNumber);
         System.out.println("neededPortNumber is " + neededPortNumber + "  #######  " + "This Port is  " + currentPortNumber);
         String response = "";
-        if (!hasReplica(neededPortNumber, currentPortNumber)) {
+        if (hasReplica(neededPortNumber, currentPortNumber)) {
             System.out.println("I am not in the correct node");
             response = getValueReadWriteQuorum(neededPortNumber, currentPortNumber, request, readQuorum);
             sendStringToSocket(sender, response);
         } else {
+
             for (LSMTree lsmTree : lsmTrees) {
                 if (lsmTree.getReplicaId() == neededPortNumber) {
                     // ask the server to get the value from other nodes
@@ -290,53 +279,71 @@ public class Server {
         }
     }
     //move folder with all files to another folder
-    static void moveFolder(String source, String destination) throws IOException {
-        File sourceFolder = new File(source);
-        File destinationFolder = new File(destination);
-        if (!destinationFolder.exists()) {
-            destinationFolder.mkdir();
-        }
-        File[] files = sourceFolder.listFiles();
-        //print list of files
-        for (File file : files) {
-            if (file.isFile()) {
-                System.out.println("File " + file.getName());
-            }
-        }
-        for (File file : files) {
-            if (file.isFile()) {
-                Files.move(file.toPath(), Paths.get(destinationFolder + "/" + file.getName()), StandardCopyOption.REPLACE_EXISTING);
-            }
-        }
-    }
+//    static void moveFolder(String source, String destination) throws IOException {
+//        File sourceFolder = new File(source);
+//        File destinationFolder = new File(destination);
+//        if (!destinationFolder.exists()) {
+//            destinationFolder.mkdir();
+//        }
+//        File[] files = sourceFolder.listFiles();
+//        //print list of files
+//        for (File file : files) {
+//            if (file.isFile()) {
+//                System.out.println("File " + file.getName());
+//            }
+//        }
+//        for (File file : files) {
+//            if (file.isFile()) {
+//                Files.move(file.toPath(), Paths.get(destinationFolder + "/" + file.getName()), StandardCopyOption.REPLACE_EXISTING);
+//            }
+//        }
+//    }
+//
+//    static void moveReplicas(int portNumber) throws IOException {
+//        int n=portNumber-5000;
+//        System.out.println(currentPortNumber);
+//        for (int i=0 ; i < ringStructure.nodesReplicasMapping.changedNodes.size();i++){
+//            System.out.println(ringStructure.nodesReplicasMapping.changedNodes.get(i));
+//        }
+//        if(ringStructure.nodesReplicasMapping.changedNodes.contains(currentPortNumber)){
+//            int k=currentPortNumber-5000;
+//            int replica=n+(k-replicationFactor)+5000;
+//            System.out.println("******************************** replica to move = "+ replica);
+//            String replicaName="/home/elemary/Projects/DataBaseManagement/Node_Number"+currentPortNumber+"/ReplicaOf"+replica+"/Data/";
+//            String newLocation="/home/elemary/Projects/DataBaseManagement/Node_Number"+portNumber+"/ReplicaOf"+replica+"/Data";
+//            moveFolder(replicaName,newLocation);
+//        }
+//    }
+    static void doCompaction() throws IOException {
+        new java.util.Timer().schedule(
+                new java.util.TimerTask() {
+                    @Override
+                    public void run() {
+                        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!! Compaction Started");
+                        for (LSMTree lsmTree : lsmTrees) {
+                            try {
+                                lsmTree.startCompaction();
+                            } catch (IOException | InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!! Compaction Finished");
+                    }
 
-    static void moveReplicas(int portNumber) throws IOException {
-        int n=portNumber-5000;
-        System.out.println(currentPortNumber);
-        for (int i=0 ; i < ringStructure.nodesReplicasMapping.changedNodes.size();i++){
-            System.out.println(ringStructure.nodesReplicasMapping.changedNodes.get(i));
-        }
-        if(ringStructure.nodesReplicasMapping.changedNodes.contains(currentPortNumber)){
-            int k=currentPortNumber-5000;
-            int replica=n+(k-replicationFactor)+5000;
-            System.out.println("******************************** replica to move = "+ replica);
-            String replicaName="/home/elemary/Projects/DataBaseManagement/Node_Number"+currentPortNumber+"/ReplicaOf"+replica+"/Data/";
-            String newLocation="/home/elemary/Projects/DataBaseManagement/Node_Number"+portNumber+"/ReplicaOf"+replica+"/Data";
-            File from=new File(replicaName);
-            File to=new File(newLocation);
-            moveFolder(replicaName,newLocation);
+                },5000, (long) nodeNumber * numberOfNodes * 1000 + (long) numberOfNodes * nodeNumber*1000
 
-        }
+        );
+
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        // Server configurations
-        int nodeNumber = Integer.parseInt(args[0]);
-        int numberOfNodes = Integer.parseInt(args[1]);
-        int numberOfVirtualNodes = Integer.parseInt(args[2]);
+        // Server configurations 6 6 20 3 10 5 2 2 1;
+        nodeNumber = Integer.parseInt(args[0]);
+        numberOfNodes = Integer.parseInt(args[1]);
+        numberOfVirtualNodes = Integer.parseInt(args[2]);
         replicationFactor = Integer.parseInt(args[3]);
-        int maxSegmentSize = Integer.parseInt(args[4]);
-        int maxMemTableSize = Integer.parseInt(args[5]);
+        maxSegmentSize = Integer.parseInt(args[4]);
+        maxMemTableSize = Integer.parseInt(args[5]);
         int writeQuorum = Integer.parseInt(args[6]);
         int readQuorum = Integer.parseInt(args[7]);
         int approach = Integer.parseInt(args[8]);
@@ -360,10 +367,6 @@ public class Server {
             withCrashRecovery = false;
         }
 
-        System.out.println("Set Up the server");
-        Thread.sleep(5000);
-
-
         // Create ring structure.
         ringStructure = RingStructure.getInstance(numberOfNodes, numberOfVirtualNodes, replicationFactor);
         ringStructure.buildMap(numberOfVirtualNodes);
@@ -372,17 +375,21 @@ public class Server {
         // Get LSM for every partition
         lsmTrees= new ArrayList<>();
         Map<Integer, List<Integer>> nodeReplicas = ringStructure.nodesReplicasMapping.whichReplicasBelongToNode;
+
         for (int i = 0; i < replicationFactor; i++) {
             System.out.println("Replica " + i + " is in port " + nodeReplicas.get(currentPortNumber).get(i));
             if (withCrashRecovery){
-                LSMTree temp = crash(currentPortNumber, nodeReplicas.get(currentPortNumber).get(i), maxSegmentSize, maxMemTableSize);
+                LSMTree temp = crash(nodeReplicas.get(currentPortNumber).get(i));
                 lsmTrees.add(temp);
-  //              lsmTrees.get(i).startCompaction();
             } else {
                 lsmTrees.add(new LSMTree(currentPortNumber, nodeReplicas.get(currentPortNumber).get(i), maxMemTableSize, maxSegmentSize, withCrashRecovery));
-   //             lsmTrees.get(i).startCompaction();
             }
         }
+        doCompaction();
+
+        System.out.println("Set Up the server");
+        Thread.sleep(5000);
+
         if (currentPortNumber==5001){
             sendToPort(7777,args[1]+" "+args[2]+" "+args[3], false);
         }
@@ -390,7 +397,7 @@ public class Server {
         try (ServerSocket serverSocket = new ServerSocket(currentPortNumber)) {
 
             while (true) {
-                System.out.println("I am listening .... ");
+                System.out.println(" ***** I am listening .... ");
 
                 boolean withQuorum = true;
                 for (LSMTree lsmTree : lsmTrees) {
@@ -412,33 +419,9 @@ public class Server {
                 } else if (request.startsWith("get")) {
                     get(request, currentPortNumber, sender, withQuorum, writeQuorum);
                 }else if (request.startsWith("addNode")){
-
-                    String finalRequest = request;
-                    Thread t = new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                for (LSMTree lsmTree : lsmTrees) {
-                                    lsmTree.flushToDisk();
-                                }
-                                ringStructure.addNode();
-                                ringStructure.nodesReplicasMapping.printWhichReplicasBelongToNode();
-                                ringStructure.nodesReplicasMapping.printChangedNodes();
-                                String newNodePort = finalRequest.split(" ")[1];
-                                String newPartitionPath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ newNodePort +"/ReplicaOf"+ newNodePort +"/Data/";
-                                String oldPartitionPath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ currentPortNumber  +"/ReplicaOf"+ currentPortNumber +"/Data/";
-                                Rehash.createNewPartition(newPartitionPath, oldPartitionPath);
-                                //TODO: send replicas to the new node
-                                //moveReplicas(Integer.parseInt(newNodePort));
-                                } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    });
-                    t.start();
-
+                    AddNodeThread addNodeThread= new AddNodeThread(lsmTrees, ringStructure, request, currentPortNumber);
+                    addNodeThread.start();
                 }
-                System.out.println(request);
             }
         }
     }

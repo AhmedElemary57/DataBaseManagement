@@ -3,6 +3,7 @@ import com.google.common.base.Charsets;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
 
+import java.nio.file.Files;
 import java.util.*;
 
 import java.io.*;
@@ -15,9 +16,11 @@ import java.util.Map;
 import static java.lang.Thread.sleep;
 
 public class LSMTree {
-    Integer nodeNumber,replicaId,nextSegmentID;
-    int maxMemeTableSize, memTableSize,segmentNumber,versionNumber,maxSegmentSize;
-    List<String> segmentIDs;
+    Integer nodeNumber,replicaId;
+    int maxMemeTableSize;
+    int memTableSize;
+    static int maxSegmentSize;
+    List<Integer> segmentIDs;
     RedBlackTree<String> memTable;
     Map<String,String> rowCache;
     BloomFilter<String> bloomFilter ;
@@ -30,14 +33,12 @@ public class LSMTree {
         this.memTable = new RedBlackTree<>();
         this.diskPath= "/home/elemary/Projects/DataBaseManagement/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
         this.maxSegmentSize=maxSegmentSize;
-        this.nextSegmentID=segmentNumber;
         this.rowCache = new HashMap<>();
         this.bloomFilter = BloomFilter.create(Funnels.stringFunnel(Charsets.UTF_16), 100, 0.01);
-        fillSegmentIDs();
-        this.versionNumber=segmentIDs.size();
+        this.segmentIDs= new ArrayList<>();
         this.rowCache= new HashMap<>();
-        this.segmentNumber=0;
         this.withCrashRecovery=withCrashRecovery;
+        System.out.println("segments : "+ segmentIDs);
     }
     public Integer getNodeNumber() {
         return nodeNumber;
@@ -49,7 +50,7 @@ public class LSMTree {
         if (listOfFiles != null) {
             for (int i = 0; i < listOfFiles.length; i++) {
                 if (listOfFiles[i].isFile()) {
-                    segmentIDs.add(listOfFiles[i].getName().split("\\.")[0]);
+                    segmentIDs.add(Integer.valueOf(listOfFiles[i].getName().split("\\.")[0]));
                 }
             }
         }
@@ -62,125 +63,201 @@ public class LSMTree {
         return replicaId;
     }
 
-    public void mergeCompaction() throws IOException {
-        String replicaPath=  "/home/elemary/Projects/DataBaseManagement/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/Data/";
+    public static int numberOfRecords(File file){
+        int count=0;
+        try {
+            Scanner sc = new Scanner(file);
+            while (sc.hasNextLine()) {
+                count++;
+                sc.nextLine();
+            }
+            sc.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        return count;
+    }
+    public void mergeFiles(File file1, File file2) throws IOException {
+        PrintWriter pw = new PrintWriter(diskPath+"Data/temp.txt");
+        BufferedReader br1 = new BufferedReader(new FileReader(file1.toPath().toString()));
+        BufferedReader br2 = new BufferedReader(new FileReader(file2.toPath().toString()));
+        String line1 = br1.readLine();
+        String line2 = br2.readLine();
 
-        int maxSize=maxSegmentSize;
-        System.out.println("segmentNumber " + nextSegmentID );
-        int tempID=1,size=0,counter;
-        boolean i=false,j=false;
-        if(nextSegmentID%2==1)counter=nextSegmentID-1;
-        else counter=nextSegmentID;
-        for(int k=0;k<counter;k+=2){
-            String file1name=replicaPath+String.valueOf(k+1)+".txt";
-            String file2name=replicaPath+String.valueOf(k+2)+".txt";
-            File myObj = new File(file1name);
-            File myObj2 = new File(file2name);
-            File temp = new File(replicaPath+"t"+String.valueOf(tempID)+".txt");
-            Scanner myReader = new Scanner(myObj);
-            Scanner myReader2 = new Scanner(myObj2);
-            FileWriter myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
-            String data=myReader.nextLine(),data2=myReader2.nextLine();
+        while (line1 != null && line2 != null) {
 
-            String key1,key2;
-            while (myReader.hasNextLine() && myReader2.hasNextLine()) {
-                if(i)
-                    data = myReader.nextLine();
-                if(j)
-                    data2 = myReader2.nextLine();
-                key1=data.split(",")[0];
-                key2=data2.split(",")[0];
-                if(key1.equals(key2)){
-                    myWriter.write(data2+'\n');
-                    i=true;
-                    j=true;
-                }
-                else if(key1.compareTo(key2)>0){
-                    myWriter.write(data2+'\n');
-                    i=false;
-                    j=true;
-                }
-                else {
-                    myWriter.write(data+'\n');
-                    i=true;
-                    j=false;
-                }
-                size++;
-                if(size>=maxSize){
-                    myWriter.close();
-                    tempID++;
-                    myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
-                    size=0;
-                }
+            String[] data1 = line1.split(",");
+            String[] data2 = line2.split(",");
+            String key1 = data1[0];
+            String key2 = data2[0];
+
+            if (key1.compareTo(key2) > 0) {
+                pw.println(line2);
+                line2 = br2.readLine();
+            } else  {
+                pw.println(line1 );
+                line1 = br1.readLine();
+
             }
-            if(!i) myWriter.write(data+'\n');
-            if(!j) myWriter.write(data2+'\n');
-            size++;
-            if(size>=maxSize){
-                myWriter.close();
-                tempID++;
-                myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
-                size=0;
-            }
-            while (myReader.hasNextLine()){
-                data=myReader.nextLine();
-                myWriter.write(data+'\n');
-                size++;
-                if(size>=maxSize){
-                    myWriter.close();
-                    tempID++;
-                    myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
-                    size=0;
-                }
-            }
-            while (myReader2.hasNextLine()){
-                data=myReader2.nextLine();
-                myWriter.write(data+'\n');
-                size++;
-                if(size>=maxSize){
-                    myWriter.close();
-                    tempID++;
-                    myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
-                    size=0;
-                }
-            }
-            myReader.close();
-            myReader2.close();
-            myWriter.close();
-            nextSegmentID-=2;
-            segmentIDs.remove(0);
-            segmentIDs.remove(0);
-            i=false;
-            j=false;
-            if(size!=0)
-                tempID++;
-            size=0;
-            myObj.delete();
-            myObj2.delete();
         }
-        segmentIDs.clear();
-        System.out.println(tempID);
-        for (int k = 1; k < tempID; k++) {
-            File file = new File(replicaPath+"t"+String.valueOf(k)+".txt");
-            File rename = new File(replicaPath+String.valueOf(k)+".txt");
-            file.renameTo(rename);
-            segmentIDs.add(String.valueOf(k));
+
+        while (line1!= null) {
+            pw.println( line1 );
+            line1 = br1.readLine();
         }
-        segmentIDs.add(String.valueOf(tempID));
-        if(new File(replicaPath+"t"+String.valueOf(tempID)+".txt").exists())
-            new File(replicaPath+"t"+String.valueOf(tempID)+".txt").delete();
-        if(nextSegmentID==1){
-            File file = new File(replicaPath+String.valueOf(counter+1)+".txt");
-            File rename = new File(replicaPath+String.valueOf(tempID)+".txt");
-            file.renameTo(rename);
-            segmentNumber=tempID;
+        while (line2!= null) {
+            pw.println( line2 );
+            line2 = br2.readLine();
         }
-        else {
-            segmentNumber=tempID-1;
-        }
+        pw.flush();
+        pw.close();
+        br1.close();
+        br2.close();
+        String mergedSegmentName = file2.getName();
+        file1.delete();
+        file2.delete();
+        File newFile = new File(diskPath+"Data/"+mergedSegmentName);
+        File oldFile = new File(diskPath+"Data/temp.txt");
+        oldFile.renameTo(newFile);
+
 
 
     }
+    // get pathes of two files and merge them in new one
+    public void mergeTwoSegments(String newerFilePath, String olderFilePath) throws IOException {
+        File file1 = new File(newerFilePath);
+        File file2 = new File(olderFilePath);
+        Collections.sort(segmentIDs);
+        if (numberOfRecords(file1) + numberOfRecords(file2) <= maxSegmentSize) {
+            mergeFiles(file1, file2);
+            this.segmentIDs.remove(Integer.valueOf(file1.getName().split("\\.")[0]));
+        }
+    }
+    public void mergeCompaction() throws IOException {
+        Collections.sort(segmentIDs);
+        for (int i = segmentIDs.size()-1; i > 0; i--) {
+            mergeTwoSegments(diskPath+"Data/"+segmentIDs.get(i) + ".txt", diskPath+"Data/"+segmentIDs.get(i - 1) + ".txt");
+        }
+    }
+//    public void mergeCompaction() throws IOException {
+//        String replicaPath=  "/home/elemary/Projects/DataBaseManagement/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/Data/";
+//
+//        int maxSize=maxSegmentSize;
+//        System.out.println("segmentNumber " + nextSegmentID );
+//        int tempID=1,size=0,counter;
+//        boolean i=false,j=false;
+//        if(nextSegmentID%2==1)counter=nextSegmentID-1;
+//        else counter=nextSegmentID;
+//        for(int k=0;k<counter;k+=2){
+//            String file1name=replicaPath+String.valueOf(k+1)+".txt";
+//            String file2name=replicaPath+String.valueOf(k+2)+".txt";
+//            File myObj = new File(file1name);
+//            File myObj2 = new File(file2name);
+//            File temp = new File(replicaPath+"t"+String.valueOf(tempID)+".txt");
+//            Scanner myReader = new Scanner(myObj);
+//            Scanner myReader2 = new Scanner(myObj2);
+//            FileWriter myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
+//            String data=myReader.nextLine(),data2=myReader2.nextLine();
+//
+//            String key1,key2;
+//            while (myReader.hasNextLine() && myReader2.hasNextLine()) {
+//                if(i)
+//                    data = myReader.nextLine();
+//                if(j)
+//                    data2 = myReader2.nextLine();
+//                key1=data.split(",")[0];
+//                key2=data2.split(",")[0];
+//                if(key1.equals(key2)){
+//                    myWriter.write(data2+'\n');
+//                    i=true;
+//                    j=true;
+//                }
+//                else if(key1.compareTo(key2)>0){
+//                    myWriter.write(data2+'\n');
+//                    i=false;
+//                    j=true;
+//                }
+//                else {
+//                    myWriter.write(data+'\n');
+//                    i=true;
+//                    j=false;
+//                }
+//                size++;
+//                if(size>=maxSize){
+//                    myWriter.close();
+//                    tempID++;
+//                    myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
+//                    size=0;
+//                }
+//            }
+//            if(!i) myWriter.write(data+'\n');
+//            if(!j) myWriter.write(data2+'\n');
+//            size++;
+//            if(size>=maxSize){
+//                myWriter.close();
+//                tempID++;
+//                myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
+//                size=0;
+//            }
+//            while (myReader.hasNextLine()){
+//                data=myReader.nextLine();
+//                myWriter.write(data+'\n');
+//                size++;
+//                if(size>=maxSize){
+//                    myWriter.close();
+//                    tempID++;
+//                    myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
+//                    size=0;
+//                }
+//            }
+//            while (myReader2.hasNextLine()){
+//                data=myReader2.nextLine();
+//                myWriter.write(data+'\n');
+//                size++;
+//                if(size>=maxSize){
+//                    myWriter.close();
+//                    tempID++;
+//                    myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
+//                    size=0;
+//                }
+//            }
+//            myReader.close();
+//            myReader2.close();
+//            myWriter.close();
+//            nextSegmentID-=2;
+//            segmentIDs.remove(0);
+//            segmentIDs.remove(0);
+//            i=false;
+//            j=false;
+//            if(size!=0)
+//                tempID++;
+//            size=0;
+//            myObj.delete();
+//            myObj2.delete();
+//        }
+//        segmentIDs.clear();
+//        System.out.println(tempID);
+//        for (int k = 1; k < tempID; k++) {
+//            File file = new File(replicaPath+"t"+String.valueOf(k)+".txt");
+//            File rename = new File(replicaPath+String.valueOf(k)+".txt");
+//            file.renameTo(rename);
+//            segmentIDs.add(String.valueOf(k));
+//        }
+//        segmentIDs.add(String.valueOf(tempID));
+//        if(new File(replicaPath+"t"+String.valueOf(tempID)+".txt").exists())
+//            new File(replicaPath+"t"+String.valueOf(tempID)+".txt").delete();
+//        if(nextSegmentID==1){
+//            File file = new File(replicaPath+String.valueOf(counter+1)+".txt");
+//            File rename = new File(replicaPath+String.valueOf(tempID)+".txt");
+//            file.renameTo(rename);
+//            segmentNumber=tempID;
+//        }
+//        else {
+//            segmentNumber=tempID-1;
+//        }
+//
+//
+//    }
     public String getValueOf(String key) throws IOException {
         // print row cache
         System.out.println("row cache");
@@ -220,7 +297,6 @@ public class LSMTree {
         }
         if (memTableSize>=maxMemeTableSize){
             flushToDisk();
-            segmentIDs.add(String.valueOf(segmentNumber));
             memTableSize=0;
             memTable.clear();
         }
@@ -240,8 +316,15 @@ public class LSMTree {
         }
     }
     void flushToDisk() throws IOException {
-        nextSegmentID++;
-        String fileName = nextSegmentID+".txt";
+        int max;
+        if (segmentIDs.size()==0){
+            max=0;
+        }
+        else {
+           max = Collections.max(segmentIDs);
+        }
+
+        String fileName = max+1+".txt";
         List<Node<String>> nodesOfRedBlackTree = memTable.inOrderTraversal();
         File file = new File(diskPath+"Data/");
         if (!file.exists()) {
@@ -250,8 +333,8 @@ public class LSMTree {
         FileWriter fileWriter = new FileWriter(diskPath+"Data/"+fileName);
         for (Node<String> node : nodesOfRedBlackTree) {
             fileWriter.write(node.getKey()+","+node.getValue()+'\n');
-            versionNumber++;
         }
+        segmentIDs.add(max+1);
         String path = diskPath+"commitLog"+replicaId+".txt";
         File commitFile = new File(path);
         commitFile.delete();
@@ -291,22 +374,27 @@ public class LSMTree {
         }
         return getValueFromSSTable(key,fromSegment-1);
     }
-    void startCompaction() throws IOException, InterruptedException {
-            System.out.println("Compaction Started");
+    public void startCompaction() throws IOException, InterruptedException{
+            System.out.println("************************** Compaction Started **************************");
+            System.out.println("Segment IDs: "+segmentIDs);
             CompactionThread compactionThread = new CompactionThread(this);
-            //compactionThread.start();
-            System.out.println("Compaction Finished");
-        }
+            compactionThread.start();
+    }
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        LSMTree lsmTree = new LSMTree(5005,5005,5,10, true);
-        lsmTree.segmentNumber=4;
-        lsmTree.segmentIDs=new ArrayList<>();
-        lsmTree.segmentIDs.add("1");
-        lsmTree.segmentIDs.add("2");
-        lsmTree.segmentIDs.add("3");
-        lsmTree.segmentIDs.add("4");
+        LSMTree lsmTree = new LSMTree(5017,5017,5,10, true);
+
+        for (int i=0; i<19; i++){
+            lsmTree.setValueOf("key"+i,"value"+i);
+        }
+        lsmTree.setValueOf("key"+20,"value"+200);
+        lsmTree.setValueOf("key"+21,"value"+21);
+
         lsmTree.startCompaction();
+
+        for (int i=20; i<30; i++){
+            lsmTree.setValueOf("key"+i,"value"+i);
+        }
 
     }
 
