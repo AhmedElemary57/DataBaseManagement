@@ -25,11 +25,11 @@ public class Admin {
                     "do\n" +
                     "   gnome-terminal -- bash -c \"java -jar " + elemary[1] + " $i "
                     + data.get(0) + " " + data.get(1) + " " + data.get(2) + " " + data.get(3) +
-                    " " + data.get(4) + " " + data.get(5) + " " + data.get(6) +" 1"+"; exec bash\"\n" +
+                    " " + data.get(4) + " " + data.get(5) + " " + data.get(6) +" 1"+" 0"+"; exec bash\"\n" +
                     "done\n");
             myWriter.close();
             count = data.get(0);
-            Server.sendToPort(4988, "start " + data.get(0), false);
+            Requests.sendToPort(7999, "start " + data.get(0), false);
         } catch (IOException e) {
             System.out.println("An error occurred.");
             e.printStackTrace();
@@ -47,13 +47,13 @@ public class Admin {
                     "gnome-terminal -- bash -c \"java -jar " + elemary[1] + " "
                     + count + " "
                     + count + " " + data.get(1) + " " + data.get(2) + " " + data.get(3) +
-                    " " + data.get(4) + " " + data.get(5) + " " + data.get(6) + " 1"+"; exec bash\"\n" );
+                    " " + data.get(4) + " " + data.get(5) + " " + data.get(6) + " 1"+" 1"+"; exec bash\"\n" );
             myWriter.close();
 
             for (int i = 1; i < count ; i++) {
-                Server.sendToPort(5000+i,"addNode "+(5000+count), false);
+                Requests.sendToPort(5000+i,"addNode "+(5000+count), false);
             }
-            Server.sendToPort(5000,"addNode "+ (5000 + count), false);
+            Requests.sendToPort(5000,"addNode "+ (5000 + count), false);
 
         } catch (IOException e) {
             System.out.println("An error occurred.");

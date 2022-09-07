@@ -2,15 +2,14 @@ package org.example;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 public class AddNodeThread extends Thread{
     List<LSMTree> lsmTrees;
-    RingStructure ringStructure;
     String request;
     int currentPortNumber;
-    public AddNodeThread(List<LSMTree> lsmTrees, RingStructure ringStructure, String request, int currentPortNumber) {
+    public AddNodeThread(List<LSMTree> lsmTrees, String request, int currentPortNumber) {
         this.lsmTrees = lsmTrees;
-        this.ringStructure = ringStructure;
         this.request = request;
         this.currentPortNumber = currentPortNumber;
     }
@@ -22,17 +21,42 @@ public class AddNodeThread extends Thread{
                 for (LSMTree lsmTree : lsmTrees) {
                     lsmTree.flushToDisk();
                 }
-                ringStructure.addNode();
-                ringStructure.nodesReplicasMapping.printWhichReplicasBelongToNode();
-                ringStructure.nodesReplicasMapping.printChangedNodes();
+                Server.ringStructure.addNode();
+                Server.nodesReplicasMapping.printWhichReplicasBelongToNode();
+                Server.nodesReplicasMapping.printChangedNodes();
                 String newNodePort = request.split(" ")[1];
                 String newPartitionPath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ newNodePort +"/ReplicaOf"+ newNodePort +"/Data/";
-                String oldPartitionPath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ currentPortNumber  +"/ReplicaOf"+ currentPortNumber +"/Data/";
-                Rehash.createNewPartition(newPartitionPath, oldPartitionPath);
+                for(Integer entry : Server.nodesReplicasMapping.whichReplicasBelongToNode.get(currentPortNumber)) {
+                    String oldPartitionPath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ currentPortNumber  +"/ReplicaOf"+ entry +"/Data/";
+                    if(entry==currentPortNumber){
+                        Rehash.createNewPartition(newPartitionPath, oldPartitionPath,false);
+                    }
+                    else{
+                        Rehash.createNewPartition(newPartitionPath, oldPartitionPath,true);
+                    }
+                }
                 //TODO: send replicas to the new node
                 //moveReplicas(Integer.parseInt(newNodePort));
+                 int replicaToBeRemoved = (currentPortNumber-5000)+ Server.ringStructure.numberOfNodes - Server.ringStructure.replicationFactor;
+                 for (LSMTree lsmTree : lsmTrees) {
+                    if ( lsmTree.getReplicaId()-5000 == replicaToBeRemoved) {
+                        Thread.sleep(15000);
+                        System.out.println("Removing replica "+lsmTree.getReplicaId() +" and Insert new replica " + 5000+Server.ringStructure.numberOfNodes);
+                        lsmTree.replicaId = 5000+Server.ringStructure.numberOfNodes;
+                        lsmTree.fillSegmentIDs();
+                        System.out.println("Set replica "+lsmTree.getReplicaId());
+                        for (int i=0; i<lsmTree.segmentIDs.size(); i++) {
+                            System.out.println("Segment---- "+lsmTree.segmentIDs.get(i));
+                        }
+
+                    }
+                }
             } catch (IOException e) {
                 e.printStackTrace();
-            }
+            } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
+        Server.sem.release();
+
+    }
 }
