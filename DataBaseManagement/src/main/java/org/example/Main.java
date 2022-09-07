@@ -12,7 +12,15 @@ public class Main {
     static int nextSegmentID=6,maxSize=10;
     static List<Integer> segmentIDs=new LinkedList<>();
 
-
+    public static void moveReplicas(String from,String to){
+        String command = "mv "+from+" "+to;
+        try {
+            Runtime.getRuntime().exec(command);
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     public static void main(String[] args) throws IOException {
 
     }

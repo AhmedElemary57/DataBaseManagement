@@ -14,7 +14,7 @@ public class Client {
     int portNumber;
     int numberOfNodes;
     public Client() throws InterruptedException {
-        this.portNumber = 4988;
+        this.portNumber = 7999;
         System.out.println("Client started and was done by Thread number "+Thread.currentThread().getId());
         thread.start();
         thread.join();
@@ -50,19 +50,17 @@ public class Client {
             int serverPortNumber= isAnyPortAvailable(numberOfNodes);
 
             try (Socket socket = new Socket("localhost", serverPortNumber)) {
-                System.out.println("Client received: " + "Server port number is " + serverPortNumber);
+                System.out.println("Server port number is " + serverPortNumber);
                 String answer= sendToPort(input, socket);
                 System.out.println("Client received: " + answer);
                 return answer;
             }catch (IOException socket){
-                System.out.println("Server"+serverPortNumber+ "is not available I will try again ");
+                System.out.println("Server "+serverPortNumber+ " is not available I will try again ");
                 i++;
             }
         }
         return "Servers is not available";
-
-
-    }
+   }
     Thread thread = new Thread(new Runnable() {
 
         @Override
@@ -96,6 +94,7 @@ public class Client {
         Thread.sleep(10000);
         for (int i = 0; i < 100; i++) {
             try {
+                Thread.sleep(100);
                 client.sendRequest("key"+i,"value"+i,true);
                 client.sendRequest("key"+i,"value"+i,false);
             } catch (IOException e) {

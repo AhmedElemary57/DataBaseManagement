@@ -11,6 +11,47 @@ public class NodesReplicasMapping {
 
     Map<Integer, List<Integer>>  whichReplicasBelongToNode;//give me a map of node and its connected replicas
     List<Integer> changedNodes;
+
+    public void setReplicationFactor(int replicationFactor) {
+        this.replicationFactor = replicationFactor;
+    }
+
+    public void setNumberOfNodes(int numberOfNodes) {
+        this.numberOfNodes = numberOfNodes;
+    }
+
+    public int getStartingPortNumber() {
+        return startingPortNumber;
+    }
+
+    public void setStartingPortNumber(int startingPortNumber) {
+        this.startingPortNumber = startingPortNumber;
+    }
+
+    public Map<Integer, List<Integer>> getNodeReplicasPositionMapping() {
+        return nodeReplicasPositionMapping;
+    }
+
+    public void setNodeReplicasPositionMapping(Map<Integer, List<Integer>> nodeReplicasPositionMapping) {
+        this.nodeReplicasPositionMapping = nodeReplicasPositionMapping;
+    }
+
+    public Map<Integer, List<Integer>> getWhichReplicasBelongToNode() {
+        return whichReplicasBelongToNode;
+    }
+
+    public void setWhichReplicasBelongToNode(Map<Integer, List<Integer>> whichReplicasBelongToNode) {
+        this.whichReplicasBelongToNode = whichReplicasBelongToNode;
+    }
+
+    public List<Integer> getChangedNodes() {
+        return changedNodes;
+    }
+
+    public void setChangedNodes(List<Integer> changedNodes) {
+        this.changedNodes = changedNodes;
+    }
+
     public NodesReplicasMapping(int replicationFactor, int numberOfNodes, int startingPortNumber) {
         this.replicationFactor = replicationFactor;
         this.numberOfNodes = numberOfNodes;
@@ -19,17 +60,14 @@ public class NodesReplicasMapping {
         this.startingPortNumber = startingPortNumber;
 
     }
-    public void addNode(){
+    public void addNode() {
         numberOfNodes++;
         distributeReplicas();
         generateNodeWhichReplicaBelongToNode();
-        changedNodes=new ArrayList<>();
-        for (int i = 0; i < replicationFactor-1; i++) {
-          changedNodes.add(startingPortNumber+i);
+        changedNodes = new ArrayList<>();
+        for (int i = 0; i < replicationFactor - 1; i++) {
+            changedNodes.add(startingPortNumber + i);
         }
-        changedNodes.add(startingPortNumber+replicationFactor);
-
-
     }
     public void printChangedNodes(){
         for (int i = 0; i < changedNodes.size(); i++) {

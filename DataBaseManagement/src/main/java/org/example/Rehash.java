@@ -52,7 +52,7 @@ public class Rehash {
      * @param segmentPath : The path of the old ssTable file to transfer the data from it.
      *
      */
-    public static void createNewSegment(ArrayList<ArrayList<String>> ranges, String newNodePath, String newSegmentName, String segmentPath) throws IOException {
+    public static void createNewSegment(ArrayList<ArrayList<String>> ranges, String newNodePath, String newSegmentName, String segmentPath,boolean delete) throws IOException {
         System.out.println("Creating Segment"+newSegmentName);
         File oldFile = new File(segmentPath);
 
@@ -74,30 +74,32 @@ public class Rehash {
         }
         myReader.close();
         oldFile.delete();
+            FileWriter oldSegmentWriter = new FileWriter(oldFile);
+            for (String record:recordsRemain) {
+                oldSegmentWriter.write(record+"\n");
+            }
+            oldSegmentWriter.close();
+        if(!delete){
+            if (redBlackTree.size() == 0) {
+                return;
+            }
+            File newFile = new File(newNodePath);
+            if (!newFile.exists()) {
+                newFile.mkdirs();
+            }
 
-        FileWriter oldSegmentWriter = new FileWriter(oldFile);
-        for (String record:recordsRemain) {
-            oldSegmentWriter.write(record+"\n");
-        }
-        oldSegmentWriter.close();
-        if (redBlackTree.size() == 0) {
-            return;
-        }
-        File newFile = new File(newNodePath);
-        if (!newFile.exists()) {
-            newFile.mkdirs();
+            FileWriter newFileWriter = new FileWriter(newFile+"/"+newSegmentName+".txt", true);
+            List<Node<String>> keyValue=redBlackTree.inOrderTraversal();
+            for (int i = 0; i < keyValue.size(); i++) {
+                System.out.println(keyValue.get(i).getKey() + "," + keyValue.get(i).getValue());
+                newFileWriter.write(keyValue.get(i).getKey() + "," + keyValue.get(i).getValue() + "\n");
+            }
+            newFileWriter.close();
         }
 
-        FileWriter newFileWriter = new FileWriter(newFile+"/"+newSegmentName+".txt", true);
-        List<Node<String>> keyValue=redBlackTree.inOrderTraversal();
-        for (int i = 0; i < keyValue.size(); i++) {
-            System.out.println(keyValue.get(i).getKey() + "," + keyValue.get(i).getValue());
-            newFileWriter.write(keyValue.get(i).getKey() + "," + keyValue.get(i).getValue() + "\n");
-        }
-        newFileWriter.close();
     }
 
-    public static void createNewPartition(String newNodePath, String oldPath) throws IOException {
+    public static void createNewPartition(String newNodePath, String oldPath,boolean delete) throws IOException {
         File folder = new File(oldPath);
         File[] listOfFiles = folder.listFiles();
         if (listOfFiles != null) {
@@ -105,7 +107,7 @@ public class Rehash {
             for (int i = 0; i < listOfFiles.length; i++) {
                 if (listOfFiles[i].isFile()) {
                     listOfFiles[i].getName();
-                    createNewSegment(ranges,newNodePath,Server.currentPortNumber+String.valueOf(i+1),listOfFiles[i].getPath());
+                    createNewSegment(ranges,newNodePath,Server.currentPortNumber+String.valueOf(i+1),listOfFiles[i].getPath(),delete);
                 }
             }
         }
@@ -116,7 +118,7 @@ public class Rehash {
         String oldNodePath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ 5003 +"/ReplicaOf"+5003+"/Data/";
         String newNodePath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ 5017 +"/ReplicaOf"+5017+"/Data/";
         try {
-            createNewPartition(newNodePath,oldNodePath);
+            createNewPartition(newNodePath,oldNodePath,false);
         } catch (IOException e) {
             e.printStackTrace();
         }

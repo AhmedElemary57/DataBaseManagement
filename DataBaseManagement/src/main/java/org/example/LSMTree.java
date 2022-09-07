@@ -3,6 +3,7 @@ import com.google.common.base.Charsets;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
 
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.*;
 
@@ -25,7 +26,6 @@ public class LSMTree {
     Map<String,String> rowCache;
     BloomFilter<String> bloomFilter ;
     String diskPath="";
-    boolean withCrashRecovery;
     public LSMTree(Integer serverName, Integer memTableID, int maxMemeTableSize, int maxSegmentSize, boolean withCrashRecovery) {
         this.nodeNumber = serverName;
         this.replicaId = memTableID;
@@ -34,10 +34,9 @@ public class LSMTree {
         this.diskPath= "/home/elemary/Projects/DataBaseManagement/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
         this.maxSegmentSize=maxSegmentSize;
         this.rowCache = new HashMap<>();
-        this.bloomFilter = BloomFilter.create(Funnels.stringFunnel(Charsets.UTF_16), 100, 0.01);
+        this.bloomFilter = BloomFilter.create(Funnels.stringFunnel(Charset.defaultCharset()), 100, 0.01);
         this.segmentIDs= new ArrayList<>();
         this.rowCache= new HashMap<>();
-        this.withCrashRecovery=withCrashRecovery;
         System.out.println("segments : "+ segmentIDs);
     }
     public Integer getNodeNumber() {
@@ -45,6 +44,9 @@ public class LSMTree {
     }
     public void fillSegmentIDs(){
         segmentIDs=new ArrayList<>();
+        System.out.println("filling segment ids" + segmentIDs );
+        diskPath= "/home/elemary/Projects/DataBaseManagement/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
+        System.out.println("disk path : " + diskPath);
         File folder = new File(diskPath+"Data/");
         File[] listOfFiles = folder.listFiles();
         if (listOfFiles != null) {
@@ -54,6 +56,8 @@ public class LSMTree {
                 }
             }
         }
+        System.out.println("filled segment ids" + segmentIDs);
+
     }
     public void setNodeNumber(Integer nodeNumber) {
         this.nodeNumber = nodeNumber;
@@ -77,6 +81,11 @@ public class LSMTree {
         }
         return count;
     }
+
+    public void setReplicaId(Integer replicaId) {
+        this.replicaId = replicaId;
+    }
+
     public void mergeFiles(File file1, File file2) throws IOException {
         PrintWriter pw = new PrintWriter(diskPath+"Data/temp.txt");
         BufferedReader br1 = new BufferedReader(new FileReader(file1.toPath().toString()));
@@ -119,8 +128,6 @@ public class LSMTree {
         File newFile = new File(diskPath+"Data/"+mergedSegmentName);
         File oldFile = new File(diskPath+"Data/temp.txt");
         oldFile.renameTo(newFile);
-
-
 
     }
     // get pathes of two files and merge them in new one
@@ -272,7 +279,8 @@ public class LSMTree {
         if (memTable.search(key)!=null){
             return value;
         } else {
-            if (bloomFilter.mightContain(key) || withCrashRecovery){
+            if (1==1){
+                System.out.println("Bloom Filter Get value of key: " + key);
                 value = getValueFromSSTable(key,segmentIDs.size());
                 rowCache.put(key, value);
                 return value;
@@ -285,13 +293,8 @@ public class LSMTree {
     public void setValueOf(String key, String value) throws IOException {
         memTable.insert(key,value);
         memTableSize = memTable.size();
-        if(withCrashRecovery){
-            commitLogs(key,value);
-        }
-        else {
-            bloomFilter.put(key);
-        }
-
+        commitLogs(key,value);
+        bloomFilter.put(key);
         if(rowCache.containsKey(key)){
             rowCache.remove(key);
         }
@@ -336,7 +339,12 @@ public class LSMTree {
         }
         segmentIDs.add(max+1);
         String path = diskPath+"commitLog"+replicaId+".txt";
+        String bloomFilterPath = diskPath+"bloomFilter"+replicaId+".txt";
+
         File commitFile = new File(path);
+        FileOutputStream out = new FileOutputStream(bloomFilterPath);
+        bloomFilter.writeTo(out);
+
         commitFile.delete();
         fileWriter.close();
     }

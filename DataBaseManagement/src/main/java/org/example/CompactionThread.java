@@ -21,6 +21,6 @@ public class CompactionThread extends Thread{
                 throw new RuntimeException(e);
             }
             System.out.println("CompactionThread finished and was done by Thread number "+Thread.currentThread().getId());
-
+            Server.sem.release();
         }
 }

@@ -102,7 +102,7 @@ public class RingStructureDraw extends JPanel {
 
         ServerSocket serverSocket = new ServerSocket(7777);
         Socket socket = serverSocket.accept();
-        String request = Server.getInputFromSocket(socket);
+        String request = Requests.getInputFromSocket(socket);
         System.out.println("got "+request);
         String[] requestArray = request.split(" ");
         int numberOfNodes = Integer.parseInt(requestArray[0]);
@@ -115,13 +115,13 @@ public class RingStructureDraw extends JPanel {
         ringStructure = RingStructure.getInstance(numberOfNodes, numberOfVirtualNode, numberOfReplicas);
         ringStructure.buildMap(numberOfVirtualNode);
         EventQueue.invokeLater(RingStructureDraw::create);
-        create();
-
-        ServerSocket serverSocketForModification = new ServerSocket(7775);
-        while (true){
-            Socket socketForModification = serverSocketForModification.accept();
-            String requestForModification = Server.getInputFromSocket(socketForModification);
-        }
+//        create();
+//
+//        ServerSocket serverSocketForModification = new ServerSocket(7775);
+//        while (true){
+//            Socket socketForModification = serverSocketForModification.accept();
+//            String requestForModification = Server.getInputFromSocket(socketForModification);
+//        }
 
 
 

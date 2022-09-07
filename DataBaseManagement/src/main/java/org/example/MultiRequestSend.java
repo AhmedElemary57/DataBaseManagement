@@ -20,7 +20,7 @@ public class MultiRequestSend implements Runnable {
     public void run() {
         try {
             System.out.println("Request started and was done by Thread number ------------> "+Thread.currentThread().getId());
-            String response = Server.sendToPort(replicaPosition, "*"+request,true);
+            String response = Requests.sendToPort(replicaPosition, "*"+request,true);
             value = response;
         } catch (IOException e) {
             throw new RuntimeException(e);

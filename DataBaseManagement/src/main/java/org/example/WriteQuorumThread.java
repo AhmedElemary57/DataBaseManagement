@@ -19,7 +19,7 @@ public class WriteQuorumThread extends Thread{
     public void run() {
         try {
             //77
-            Server.sendToPort(replicaPosition, "*set("+key+","+value+")",false);
+            Requests.sendToPort(replicaPosition, "*set("+key+","+value+")",false);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
