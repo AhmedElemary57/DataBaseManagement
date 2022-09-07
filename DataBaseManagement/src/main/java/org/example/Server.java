@@ -32,12 +32,12 @@ public class Server {
         System.out.println("replicasPosition = " + replicasPosition);
         List<String> responses = new ArrayList<>();
 
-        if (replicasPosition.contains(Integer.valueOf(currentPortNumber))){
+        if (replicasPosition.contains(currentPortNumber)){
             String key = "";
             String myResponse = "Set Successful";
             if (request.startsWith("get")){
-                key = request.substring(4,request.length()-1);
-                myResponse = findValueFromPartitions(neededReplicaId ,key );
+                key = request.substring(4, request.length() - 1);
+                myResponse = findValueFromPartitions(partitionID ,key );
             }
             replicasPosition.remove(Integer.valueOf(currentPortNumber));
             responses.add(myResponse);
@@ -82,7 +82,50 @@ public class Server {
         }
         return "Error 404 Not Found";
     }
-    static LSMTree crash( int replicaID) throws IOException {
+    static LSMTree loadSegments(int replicaID, LSMTree crashRecovery) {
+        File segments = new File("/home/elemary/Projects/DataBaseManagement/Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/Data/");
+        if (segments.exists()) {
+            File[] files = segments.listFiles();
+            for (File file1 : files) {
+                if (file1.isFile()) {
+                    crashRecovery.segmentIDs.add(Integer.valueOf(file1.getName().split("\\.")[0]));
+                }
+            }
+            System.out.println("segmentIDs = " + crashRecovery.segmentIDs);
+        }
+        return crashRecovery;
+    }
+    static LSMTree loadCommitLog(int replicaID, LSMTree crashRecovery) {
+        File commitLog = new File("/home/elemary/Projects/DataBaseManagement/Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/"
+                + "commitLog" + replicaID + ".txt");
+        if (commitLog.exists()) {
+            Scanner myReader = null;
+            try {
+                myReader = new Scanner(commitLog);
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+            while (myReader.hasNextLine()) {
+                String data = myReader.nextLine();
+                List<String> dataSplit = Arrays.asList(data.split(","));
+                crashRecovery.memTable.insert(dataSplit.get(0), dataSplit.get(1));
+                System.out.println("Key = " + dataSplit.get(0) + " Value = " + dataSplit.get(1));
+            }
+        }
+        return crashRecovery;
+    }
+    public static  LSMTree loadBloomFilter(int replicaID, LSMTree crashRecovery) throws IOException {
+
+        System.out.println("Loading Bloom Filter");
+        InputStream inStream = new FileInputStream("/home/elemary/Projects/DataBaseManagement/Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/"
+                + "bloomFilter" + replicaID + ".txt");
+
+        BloomFilter<String> bloomFilter
+                = BloomFilter.readFrom(inStream, Funnels.stringFunnel(Charset.defaultCharset()));
+        crashRecovery.bloomFilter = bloomFilter;
+        return crashRecovery;
+    }
+    static LSMTree crash(int replicaID) throws IOException {
         File file = new File("/home/elemary/Projects/DataBaseManagement/Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID);
         if (file.exists()) {
             System.out.println("File exists and need to be reloaded in LSM tree ");
@@ -124,7 +167,6 @@ public class Server {
             return crashRecovery;
         }
         return new LSMTree(currentPortNumber, replicaID,maxMemTableSize, maxSegmentSize, true);
-
     }
     static void set(String request, Socket sender,boolean withQuorum, int writeQuorum) throws IOException, InterruptedException {
         String data = request.substring(4, request.length() - 1);
