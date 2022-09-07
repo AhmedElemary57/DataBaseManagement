@@ -1,5 +1,7 @@
 package org.example;
 
+import com.google.common.hash.BloomFilter;
+import com.google.common.hash.Funnels;
 import org.apache.commons.codec.digest.MurmurHash3;
 
 import java.net.*;
@@ -61,8 +63,8 @@ public class Server {
         return responses;
 
     }
-    static String getValueReadWriteQuorum(int neededPortNumber, int currentPortNumber, String request, int quorumReadWrite) throws InterruptedException, IOException {
-        List<String> responses = sendRequestToAllReplicas(neededPortNumber, currentPortNumber, request);
+    static String getValueReadWriteQuorum(int neededPortNumber, String request, int quorumReadWrite) throws InterruptedException, IOException {
+        List<String> responses = sendRequestToAllReplicas(neededPortNumber, request);
         Map<String, Integer> responsesCount = new HashMap<>();
 
         for (String response : responses) {
@@ -174,23 +176,23 @@ public class Server {
         String value = data.split(",")[1];
         int neededPortNumber = keyPortNumber(key);
         String response = "";
-        if (hasReplica(neededPortNumber, currentPortNumber)) {
+        if (!hasReplica(neededPortNumber)) {
             System.out.println("I am not in the correct node");
-            response = getValueReadWriteQuorum(neededPortNumber, currentPortNumber, request, writeQuorum);
-            sendStringToSocket(sender, response);
-        } else { // Current Node has a replica.
-            for (LSMTree lsmTree : lsmTrees) { // Find the right partition.
+            response = getValueReadWriteQuorum(neededPortNumber, request, writeQuorum);
+            Requests.sendStringToSocket(sender, response);
+        } else {
+            for (LSMTree lsmTree : lsmTrees) {
                 if (lsmTree.getReplicaId() == neededPortNumber) {
                     lsmTree.commitLogs(key,value);
 
                     lsmTree.setValueOf(key, value);
 
                     if (withQuorum) {
-                        response = getValueReadWriteQuorum(neededPortNumber, currentPortNumber, request, writeQuorum);
-                        sendStringToSocket(sender, response);
+                        response = getValueReadWriteQuorum(neededPortNumber, request, writeQuorum);
+                        Requests.sendStringToSocket(sender, response);
                     }
                     else {
-                        sendStringToSocket(sender, "Set Successful");
+                        Requests.sendStringToSocket(sender, "Set Successful");
                     }
                     break;
                 }
@@ -234,14 +236,14 @@ public class Server {
                 if (lsmTree.getReplicaId() == neededPortNumber) {
                     // ask the server to get the value from other nodes
                     if (withQuorum) {
-                        currentValue = getValueReadWriteQuorum(neededPortNumber, currentPortNumber, request, readQuorum);
+                        currentValue = getValueReadWriteQuorum(neededPortNumber, request, readQuorum);
                     } else {
                         currentValue = lsmTree.getValueOf(key);
                         if (currentValue == null) {
                             currentValue = "Error 404 Not Found";
                         }
                     }
-                    sendStringToSocket(sender, currentValue);
+                    Requests.sendStringToSocket(sender, currentValue);
                     System.out.println("The key " + key + " and value " + currentValue + " is set in the LSMTree " + lsmTree.getReplicaId());
                     break;
                 }
@@ -305,7 +307,7 @@ public class Server {
         // Create ring structure.
         ringStructure = RingStructure.getInstance(numberOfNodes, numberOfVirtualNodes, replicationFactor);
         ringStructure.buildMap(numberOfVirtualNodes);
-        ringStructure.nodesReplicasMapping.printWhichReplicasBelongToNode();
+        nodesReplicasMapping.printWhichReplicasBelongToNode();
         System.out.println("Ring Structure is built successfully");
         lsmTrees= new ArrayList<>();
         Map<Integer, List<Integer>> nodeReplicas = nodesReplicasMapping.whichReplicasBelongToNode;

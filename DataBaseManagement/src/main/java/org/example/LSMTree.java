@@ -285,7 +285,7 @@ public class LSMTree {
                 rowCache.put(key, value);
                 return value;
             } else {
-                System.out.println("Bloom Filter Missed value of key: " + key);
+                System.out.println("Bloom Filter does not contain key: " + key);
                 return null;
             }
         }

@@ -7,17 +7,16 @@ public class RingStructure {
     public static List<Long> addedNode;
     int numberOfNodes, numberOfVirtualNodes, replicationFactor;
     Map<Long,Integer> nodes_Ports = new HashMap<>();
-    NodesReplicasMapping nodesReplicasMapping;
 
     private volatile static RingStructure uniqueInstance;
     private RingStructure(int numberOfNodes, int numberOfVirtualNodes, int replicationFactor) {
         this.numberOfNodes=numberOfNodes;
         this.numberOfVirtualNodes=numberOfVirtualNodes;
         this.replicationFactor=replicationFactor;
-        nodesReplicasMapping = new NodesReplicasMapping(replicationFactor, numberOfNodes, 5001);
+        Server.nodesReplicasMapping = new NodesReplicasMapping(replicationFactor, numberOfNodes, 5001);
 
-        nodesReplicasMapping.distributeReplicas();
-        nodesReplicasMapping.generateNodeWhichReplicaBelongToNode();
+        Server.nodesReplicasMapping.distributeReplicas();
+        Server.nodesReplicasMapping.generateNodeWhichReplicaBelongToNode();
 
     }
     public static RingStructure getInstance(int numberOfNodes, int numberOfVirtualNodes, int replicationFactor) {
@@ -85,11 +84,10 @@ public class RingStructure {
         }
         Collections.sort(keys);
         Collections.sort(addedNode);
-        nodesReplicasMapping.addNode();
+        Server.nodesReplicasMapping.addNode();
         for(Map.Entry<Long,Integer> x: nodes_Ports.entrySet()){
             System.out.println(x.getKey()+","+x.getValue());
         }
-        //Here we should stop the modified section in the ring structure and move the data from one node to the other
     }
 
     public static void main(String[] args) {

@@ -13,29 +13,7 @@ import java.util.Scanner;
 
 public class Rehash {
     static ArrayList<ArrayList<String>> ranges;
-    public static int  findIndex(List<String> list, String k) {
-        // Lower and upper bounds
-        int start = 0;
-        int end = list.size() - 1;
-        // Traverse the search space
-        while (start <= end) {
-            int mid = (start + end) / 2;
-            // If K is found
-            if (list.get(mid).equals(k))
-                return mid;
-            else if (list.get(mid).compareTo(k) < 0)
-                start = mid + 1;
-            else
-                end = mid - 1;
-        }
 
-        // Return insert position
-        return end;
-    }
-
-    public static void deleteOldSegment(ArrayList<ArrayList<String>> ranges) {
-
-    }
     static boolean isInRange(String key, ArrayList<ArrayList<String>> ranges) {
         for (int i = 0; i < ranges.size(); i++) {
             String start = ranges.get(i).get(0);
