@@ -57,7 +57,6 @@ class LSMTreeTest {
     }
     @Test
     void testCompaction() throws IOException, InterruptedException {
-
         LSMTree tree = new LSMTree(408,3,5, 20, true);
         tree.startCompaction();
 

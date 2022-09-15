@@ -92,7 +92,7 @@ public class Client {
     public static void main(String[] args) throws InterruptedException {
         Client client = new Client();
         Thread.sleep(10000);
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 100; i++) {
             try {
                 client.sendRequest("key"+i,"value"+i,true);
             } catch (IOException e) {

@@ -67,7 +67,8 @@ public class BarChart extends JPanel
     }
     public static long getPartitionSize(int nodeNumber){
         int portNumber = 5000 + nodeNumber;
-        String diskPath= "" + Server.Path+"/Node_Number"+ portNumber+"/ReplicaOf"+portNumber+"/";
+        String diskPath= "./Node_Number"+ portNumber+"/ReplicaOf"+portNumber+"/";
+        System.out.println(diskPath);
         File folder = new File(diskPath+"Data/");
         return  folderSize(folder);
     }
@@ -88,7 +89,6 @@ public class BarChart extends JPanel
             chart.addBar(colors[i-1], (int) getPartitionSize(i));
         }
         frame.getContentPane().add(chart);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.pack();
         frame.setVisible(true);
     }
@@ -96,6 +96,7 @@ public class BarChart extends JPanel
     public static void  refresh(int numberOfNodes){
         frame.setVisible(false);
         showBarChart(numberOfNodes);
+        frame.setVisible(true);
 
 
     }

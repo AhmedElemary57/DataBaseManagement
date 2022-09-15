@@ -32,7 +32,7 @@ public class RingStructure {
 
     //find the node which has the replica
 
-     long find_Node(long K) {
+     int find_Node(int K) {
         // Lower and upper bounds
         int start = 0;
         int end = keys.size()-1;
@@ -85,9 +85,11 @@ public class RingStructure {
         Collections.sort(keys);
         Collections.sort(addedNode);
         Server.nodesReplicasMapping.addNode();
-        for(Map.Entry<Long,Integer> x: nodes_Ports.entrySet()){
+        for(Map.Entry<Integer,Integer> x: nodes_Ports.entrySet()){
             System.out.println(x.getKey()+","+x.getValue());
         }
+        Server.numberOfNodes++;
+        System.out.println(addedNode);
     }
 
     public static void main(String[] args) {
@@ -98,11 +100,9 @@ public class RingStructure {
             System.out.println(entry.getKey() + " " + entry.getValue());
         }
 
-    }
-
-    public static ArrayList<ArrayList<String>> ranges() {
-        ArrayList<ArrayList<String>> ranges = new ArrayList<>();
-        for (Long end : addedNode) {
+    public static ArrayList<Point> ranges() {
+        ArrayList<Point> ranges = new ArrayList<>();
+        for (Integer end : addedNode) {
             int inx = keys.indexOf(end);
             if (inx == 0) {
                 inx = keys.size() - 1;

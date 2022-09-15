@@ -22,12 +22,12 @@ public class AddNodeThread extends Thread{
                     lsmTree.flushToDisk();
                 }
                 Server.ringStructure.addNode();
-                Server.nodesReplicasMapping.printWhichReplicasBelongToNode();
+                 Server.nodesReplicasMapping.printWhichReplicasBelongToNode();
                 Server.nodesReplicasMapping.printChangedNodes();
                 String newNodePort = request.split(" ")[1];
-                String newPartitionPath = "" + Server.Path+"/Node_Number"+ newNodePort +"/ReplicaOf"+ newNodePort +"/Data/";
+                String newPartitionPath = "./Node_Number"+ newNodePort +"/ReplicaOf"+ newNodePort +"/Data/";
                 for(Integer entry : Server.nodesReplicasMapping.whichReplicasBelongToNode.get(currentPortNumber)) {
-                    String oldPartitionPath = "" + Server.Path+"/Node_Number"+ currentPortNumber  +"/ReplicaOf"+ entry +"/Data/";
+                    String oldPartitionPath = "./Node_Number"+ currentPortNumber  +"/ReplicaOf"+ entry +"/Data/";
                     if(entry==currentPortNumber){
                         Rehash.createNewPartition(newPartitionPath, oldPartitionPath,false);
                     }
@@ -54,6 +54,11 @@ public class AddNodeThread extends Thread{
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            Rearrange.start(Server.nodeNumber, Server.numberOfNodes, Server.replicationFactor);
+        } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
         Server.sem.release();

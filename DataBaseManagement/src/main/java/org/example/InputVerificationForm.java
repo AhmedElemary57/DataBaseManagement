@@ -468,7 +468,7 @@ public class InputVerificationForm extends JPanel {
             }
         });
         showChartButton.addActionListener(e -> {
-                BarChart.showBarChart(Admin.count);
+                BarChart.refresh(Admin.count);
         });
         frame.setContentPane(newContentPane);
 

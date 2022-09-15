@@ -86,7 +86,7 @@ public class Server {
         return "Error 404 Not Found";
     }
     static LSMTree loadSegments(int replicaID, LSMTree crashRecovery) {
-        File segments = new File("" + Server.Path+"/Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/Data/");
+        File segments = new File("./Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/Data/");
         if (segments.exists()) {
             File[] files = segments.listFiles();
             for (File file1 : files) {
@@ -99,7 +99,7 @@ public class Server {
         return crashRecovery;
     }
     static LSMTree loadCommitLog(int replicaID, LSMTree crashRecovery) {
-        File commitLog = new File("" + Server.Path+"/Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/"
+        File commitLog = new File("./Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/"
                 + "commitLog" + replicaID + ".txt");
         if (commitLog.exists()) {
             Scanner myReader = null;
@@ -120,7 +120,7 @@ public class Server {
     public static  LSMTree loadBloomFilter(int replicaID, LSMTree crashRecovery) throws IOException {
 
         System.out.println("Loading Bloom Filter");
-        InputStream inStream = new FileInputStream("" + Server.Path+"/Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/"
+        InputStream inStream = new FileInputStream("./Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/"
                 + "bloomFilter" + replicaID + ".txt");
 
         BloomFilter<String> bloomFilter
@@ -129,12 +129,12 @@ public class Server {
         return crashRecovery;
     }
     static LSMTree crash(int replicaID) throws IOException {
-        File file = new File("" + Server.Path+"/Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID);
+        File file = new File("./Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID);
         if (file.exists()) {
             System.out.println("File exists and need to be reloaded in LSM tree ");
             LSMTree crashRecovery = new LSMTree(currentPortNumber, replicaID,maxMemTableSize, maxSegmentSize, true);
             //get files from Data folder
-            File segments = new File("" + Server.Path+"/Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID+"/Data/");
+            File segments = new File("./Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID+"/Data/");
             if (segments.exists()) {
                 File[] files = segments.listFiles();
                 for (File file1 : files) {
@@ -144,7 +144,7 @@ public class Server {
                     }
                 }
             }
-            File commitLog = new File("" + Server.Path+"/Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID+"/"+"commitLog"+replicaID+".txt");
+            File commitLog = new File("./Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID+"/"+"commitLog"+replicaID+".txt");
             if (commitLog.exists()) {
                 Scanner myReader = new Scanner(commitLog);
                 while (myReader.hasNextLine()) {
@@ -199,9 +199,9 @@ public class Server {
        return value;
     }
     static int keyPortNumber(String key) {
-        long hashCode = MurmurHash3.hash32x86(key.getBytes());
+        int hashCode = MurmurHash3.hash32x86(key.getBytes());
         System.out.println("Hash Code is : " + hashCode);
-        Long nodeIndexOnRing = ringStructure.find_Node(hashCode);
+        Integer nodeIndexOnRing = ringStructure.find_Node(hashCode);
         System.out.println("Get index in correspond Node : " + nodeIndexOnRing);
         int neededPortNumber = ringStructure.nodes_Ports.get(nodeIndexOnRing);
         System.out.println("neededPortNumber is " + neededPortNumber + "  #######  " + "This Port is  " + currentPortNumber);
@@ -294,16 +294,6 @@ public class Server {
         System.out.println("Ring Structure is built successfully");
         lsmTrees= new ArrayList<>();
         Map<Integer, List<Integer>> nodeReplicas = nodesReplicasMapping.whichReplicasBelongToNode;
-        if (isAddedNode==1){
-            System.out.println("Getting other replicas and sending the partition to other nodes  "+ nodeNumber);
-            Rearrange.start(nodeNumber, replicationFactor, "" + Server.Path+"/");
-            System.out.println("******************************************************************\n\n\n"+ Server.Path);
-            int t=10;
-            while (t-->0){
-                System.out.print("_ ");
-                Thread.sleep(100);
-            }
-        }
 
         for (int i = 0; i < replicationFactor; i++) {
             if (withCrashRecovery){

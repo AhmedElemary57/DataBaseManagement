@@ -5,18 +5,25 @@ import java.nio.file.*;
 
 public class Rearrange {
     public static void main(String[] args) throws IOException, InterruptedException {
-        start(6,3,"/home/elemary/Projects/DataBaseManagement/");
     }
 
 
-    public static void start(int nodeNumber, int replicationFactor, String directory) throws IOException, InterruptedException {
-        int startingIndex = nodeNumber - replicationFactor + 1;
-        for (int i = 1; i <= replicationFactor - 1; i++) {
-            String sourceDir = directory + "Node_Number" + (5000 + i);
-            String destDir = directory + "Node_Number" + (5000 + nodeNumber);
-            String destSubDir = destDir + "/ReplicaOf" + (5000 + nodeNumber);
-            String sourceSubDir = sourceDir + "/ReplicaOf" + (5000 + startingIndex);
-            // Move replica from source to destination
+    public static void start(int myNodeNumber, int newNodeNumber, int replicationFactor) throws IOException, InterruptedException {
+        // Todo : identify if i should sent files
+        if (myNodeNumber > replicationFactor - 1) {
+            return;
+        }
+
+        // newNodeNumber 6
+        // replication factor + node number
+        int targetReplica = newNodeNumber - replicationFactor + myNodeNumber;
+
+
+        String sourceDir =  System.getProperty("user.dir") + "/Node_Number" + (5000 + myNodeNumber);
+        String destDir = System.getProperty("user.dir") + "/Node_Number" + (5000 + newNodeNumber);
+        String destSubDir = destDir + "/ReplicaOf" + (5000 + newNodeNumber);
+        String sourceSubDir = sourceDir + "/ReplicaOf" + (5000 + targetReplica);
+        // Move replica from source to destination
 //            WatchThread watchThread = new WatchThread(destDir,StandardWatchEventKinds.ENTRY_DELETE);
 //            watchThread.start();
             operation("mv", sourceSubDir, destDir);
@@ -34,7 +41,7 @@ public class Rearrange {
         }
     }
     public static void operation(String operation, String from, String to){
-        String command = operation+" " +from+" "+to;
+        String command = operation + " " + from + " " + to;
         try {
             Runtime.getRuntime().exec(command);
         }

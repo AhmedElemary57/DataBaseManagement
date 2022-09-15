@@ -32,7 +32,7 @@ public class LSMTree {
         this.replicaId = memTableID;
         this.maxMemeTableSize = maxMemeTableSize;
         this.memTable = new RedBlackTree<>();
-        this.diskPath= "" + Server.Path+"/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
+        this.diskPath= System.getProperty("user.dir") + "/Node_Number" + nodeNumber + "/ReplicaOf" + replicaId + "/";
         this.maxSegmentSize=maxSegmentSize;
         this.rowCache = new HashMap<>();
         this.bloomFilter = BloomFilter.create(Funnels.stringFunnel(Charset.defaultCharset()), 100, 0.01);
@@ -46,28 +46,24 @@ public class LSMTree {
     public void fillSegmentIDs(){
         segmentIDs=new ArrayList<>();
         System.out.println("filling segment ids" + segmentIDs );
-        diskPath= "" + Server.Path+"/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
+        diskPath = System.getProperty("user.dir") + "/Node_Number" + nodeNumber + "/ReplicaOf" + replicaId + "/";
         System.out.println("disk path : " + diskPath);
         File folder = new File(diskPath+"Data/");
         File[] listOfFiles = folder.listFiles();
         if (listOfFiles != null) {
             for (int i = 0; i < listOfFiles.length; i++) {
                 if (listOfFiles[i].isFile()) {
-                    segmentIDs.add(Integer.valueOf(listOfFiles[i].getName().split("\\.")[0]));
                 }
             }
         }
         System.out.println("filled segment ids" + segmentIDs);
-
     }
     public void setNodeNumber(Integer nodeNumber) {
         this.nodeNumber = nodeNumber;
     }
-
     public Integer getReplicaId() {
         return replicaId;
     }
-
     public static int numberOfRecords(File file){
         int count=0;
         try {
@@ -82,11 +78,9 @@ public class LSMTree {
         }
         return count;
     }
-
     public void setReplicaId(Integer replicaId) {
         this.replicaId = replicaId;
     }
-
     public void mergeFiles(File file1, File file2) throws IOException {
         PrintWriter pw = new PrintWriter(diskPath+"Data/temp.txt");
         BufferedReader br1 = new BufferedReader(new FileReader(file1.toPath().toString()));
@@ -144,7 +138,7 @@ public class LSMTree {
     public void mergeCompaction() throws IOException {
         Collections.sort(segmentIDs);
         for (int i = segmentIDs.size()-1; i > 0; i--) {
-            mergeTwoSegments(diskPath+"Data/"+segmentIDs.get(i) + ".txt", diskPath+"Data/"+segmentIDs.get(i - 1) + ".txt");
+            mergeTwoSegments(diskPath + "Data/" + segmentIDs.get(i) + ".txt", diskPath + "Data/" + segmentIDs.get(i - 1) + ".txt");
         }
     }
     public String getValueOf(String key) throws IOException {
@@ -271,7 +265,6 @@ public class LSMTree {
 
     public static void main(String[] args) throws IOException, InterruptedException {
         LSMTree lsmTree = new LSMTree(5017,5017,5,10, true);
-
         for (int i=0; i<19; i++){
             lsmTree.setValueOf("key"+i,"value"+i);
         }

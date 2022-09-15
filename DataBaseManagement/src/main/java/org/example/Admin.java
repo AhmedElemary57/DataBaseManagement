@@ -1,27 +1,31 @@
 package org.example;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.util.List;
 
 
 public class Admin {
 
-    private static String[] userPath = new String[] {
-            "" + Server.Path+"/src/main/java/org/example/test.sh",
-            "" + Server.Path+"/out/artifacts/DataBaseManagement_jar/DataBaseManagement.jar",
-            "" + Server.Path+"/src/main/java/org/example/test.sh"
-    };
+    public static void main(String[] args) throws IOException {
+        try (BufferedReader br = new BufferedReader(new FileReader("test.sh"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                System.out.println(line);
+            }
+        }
+
+    }
+
+    private static String userPath = "./out/artifacts/DataBaseManagement_jar/DataBaseManagement.jar";
     public static int count = 0;
     public static void startServers(List<Integer> data) throws IOException {
         // write data into test.sh file
         try {
-            FileWriter myWriter = new FileWriter(userPath[0]);
+            FileWriter myWriter = new FileWriter("test.sh");
             myWriter.write("#!/bin/bash\n" +
                     "for i in {1.." + data.get(0) + "}\n" +
                     "do\n" +
-                    "   gnome-terminal -- bash -c \"java -jar " + userPath[1] + " $i "
+                    "   gnome-terminal -- bash -c \"java -jar " + userPath + " $i "
                     + data.get(0) + " " + data.get(1) + " " + data.get(2) + " " + data.get(3) +
                     " " + data.get(4) + " " + data.get(5) + " " + data.get(6) +" 1"+" 0"+"; exec bash\"\n" +
                     "done\n");
@@ -32,17 +36,16 @@ public class Admin {
             System.out.println("An error occurred.");
             e.printStackTrace();
         }
-        ProcessBuilder pb = new ProcessBuilder(userPath[2]);
-        pb.directory(new File(System.getProperty("user.home")));
+        ProcessBuilder pb = new ProcessBuilder( "./test.sh");
         pb.start();
     }
     public static void addNode(List<Integer> data) throws IOException {
         // write data into test.sh file
         try {
-            FileWriter myWriter = new FileWriter(userPath[0]);
+            FileWriter myWriter = new FileWriter("test.sh");
             count++;
             myWriter.write("#!/bin/bash\n" +
-                    "gnome-terminal -- bash -c \"java -jar " + userPath[1] + " "
+                    "gnome-terminal -- bash -c \"java -jar " + userPath + " "
                     + count + " "
                     + count + " " + data.get(1) + " " + data.get(2) + " " + data.get(3) +
                     " " + data.get(4) + " " + data.get(5) + " " + data.get(6) + " 1"+" 1"+"; exec bash\"\n" );
@@ -58,8 +61,7 @@ public class Admin {
             e.printStackTrace();
         }
         System.out.println(count);
-        ProcessBuilder pb = new ProcessBuilder(userPath[2]);
-        pb.directory(new File(System.getProperty("user.home")));
+        ProcessBuilder pb = new ProcessBuilder("./test.sh");
         pb.start();
     }
 

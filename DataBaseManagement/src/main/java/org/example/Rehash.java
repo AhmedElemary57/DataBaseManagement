@@ -81,7 +81,7 @@ public class Rehash {
         File folder = new File(oldPath);
         File[] listOfFiles = folder.listFiles();
         if (listOfFiles != null) {
-            ArrayList<ArrayList<String>> ranges=RingStructure.ranges();
+            ArrayList<Point> ranges=RingStructure.ranges();
             for (int i = 0; i < listOfFiles.length; i++) {
                 if (listOfFiles[i].isFile()) {
                     listOfFiles[i].getName();
@@ -93,8 +93,8 @@ public class Rehash {
     public static void main(String[] args) {
         ranges = new ArrayList<>();
         ranges.add(new ArrayList<>(Arrays.asList("key19", "key24")));
-        String oldNodePath = "" + Server.Path+"/Node_Number"+ 5003 +"/ReplicaOf"+5003+"/Data/";
-        String newNodePath = "" + Server.Path+"/Node_Number"+ 5017 +"/ReplicaOf"+5017+"/Data/";
+        String oldNodePath = "./Node_Number"+ 5003 +"/ReplicaOf"+5003+"/Data/";
+        String newNodePath = "./Node_Number"+ 5017 +"/ReplicaOf"+5017+"/Data/";
         try {
             createNewPartition(newNodePath,oldNodePath,false);
         } catch (IOException e) {
