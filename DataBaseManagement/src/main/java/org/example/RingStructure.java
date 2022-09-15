@@ -60,7 +60,7 @@ public class RingStructure {
             for (int j = 0; j < numberOfVirtualNodes; j++) {
                 String postfix = String.valueOf(j);
                 int portNumber = 5000 + i;
-                String vnName = prefix + postfix+ String.valueOf(portNumber);
+                String vnName = prefix + postfix + portNumber;
                 long hashed = MurmurHash3.hash32x86(vnName.getBytes());
                 keys.add(hashed);
                 nodes_Ports.put(hashed, portNumber);
@@ -72,11 +72,11 @@ public class RingStructure {
         addedNode = new ArrayList<>();
         final char startingSymbol = 'a';
         numberOfNodes++;
+        char prefix = (char)((int)startingSymbol + numberOfNodes);
         for (int j = 0; j < numberOfVirtualNodes; j++) {
-            char prefix = (char)((int)startingSymbol + j);
             String postfix = String.valueOf(j);
             int portNumber = 5000 + numberOfNodes;
-            String vnName = prefix + postfix;
+            String vnName = prefix + postfix + portNumber;
             long hashed = MurmurHash3.hash32x86(vnName.getBytes());
             keys.add(hashed);
             addedNode.add(hashed);

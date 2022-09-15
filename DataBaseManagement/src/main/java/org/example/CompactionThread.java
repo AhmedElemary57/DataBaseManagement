@@ -12,7 +12,7 @@ public class CompactionThread extends Thread{
     @Override
     synchronized public void run() {
 
-            System.out.println("CompactionThread started and was done by Thread number "+Thread.currentThread().getId());
+            System.out.println("CompactionThread started for replica "+ lsmTree.replicaId + " and was done by Thread number "+Thread.currentThread().getId());
             try {
                 if (lsmTree.segmentIDs.size() > 2) {
                     lsmTree.mergeCompaction();
@@ -20,7 +20,7 @@ public class CompactionThread extends Thread{
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            System.out.println("CompactionThread finished and was done by Thread number "+Thread.currentThread().getId());
+            System.out.println("CompactionThread finished for replica "+ lsmTree.replicaId + " and was done by Thread number "+Thread.currentThread().getId());
             Server.sem.release();
         }
 }

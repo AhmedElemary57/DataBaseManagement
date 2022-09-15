@@ -93,8 +93,8 @@ public class Rehash {
     public static void main(String[] args) {
         ranges = new ArrayList<>();
         ranges.add(new ArrayList<>(Arrays.asList("key19", "key24")));
-        String oldNodePath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ 5003 +"/ReplicaOf"+5003+"/Data/";
-        String newNodePath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ 5017 +"/ReplicaOf"+5017+"/Data/";
+        String oldNodePath = "" + Server.Path+"/Node_Number"+ 5003 +"/ReplicaOf"+5003+"/Data/";
+        String newNodePath = "" + Server.Path+"/Node_Number"+ 5017 +"/ReplicaOf"+5017+"/Data/";
         try {
             createNewPartition(newNodePath,oldNodePath,false);
         } catch (IOException e) {

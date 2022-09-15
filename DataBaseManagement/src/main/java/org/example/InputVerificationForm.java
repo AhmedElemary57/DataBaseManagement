@@ -440,6 +440,8 @@ public class InputVerificationForm extends JPanel {
 
         JButton startButton = new JButton("Start");
         JButton addButton = new JButton("Add Node");
+        JButton showChartButton = new JButton("Show Chart");
+        showChartButton.setEnabled(false);
         addButton.setEnabled(false);
         startButton.addActionListener( e -> {
             try {
@@ -464,6 +466,9 @@ public class InputVerificationForm extends JPanel {
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
+        });
+        showChartButton.addActionListener(e -> {
+                BarChart.showBarChart(Admin.count);
         });
         frame.setContentPane(newContentPane);
 

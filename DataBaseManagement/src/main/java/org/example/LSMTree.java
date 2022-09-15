@@ -26,18 +26,19 @@ public class LSMTree {
     Map<String,String> rowCache;
     BloomFilter<String> bloomFilter ;
     String diskPath="";
+    boolean withCrashRecovery;
     public LSMTree(Integer serverName, Integer memTableID, int maxMemeTableSize, int maxSegmentSize, boolean withCrashRecovery) {
         this.nodeNumber = serverName;
         this.replicaId = memTableID;
         this.maxMemeTableSize = maxMemeTableSize;
         this.memTable = new RedBlackTree<>();
-        this.diskPath= "/home/elemary/Projects/DataBaseManagement/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
+        this.diskPath= "" + Server.Path+"/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
         this.maxSegmentSize=maxSegmentSize;
         this.rowCache = new HashMap<>();
         this.bloomFilter = BloomFilter.create(Funnels.stringFunnel(Charset.defaultCharset()), 100, 0.01);
         this.segmentIDs= new ArrayList<>();
         this.rowCache= new HashMap<>();
-        System.out.println("segments : "+ segmentIDs);
+        this.withCrashRecovery=withCrashRecovery;
     }
     public Integer getNodeNumber() {
         return nodeNumber;
@@ -45,7 +46,7 @@ public class LSMTree {
     public void fillSegmentIDs(){
         segmentIDs=new ArrayList<>();
         System.out.println("filling segment ids" + segmentIDs );
-        diskPath= "/home/elemary/Projects/DataBaseManagement/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
+        diskPath= "" + Server.Path+"/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/";
         System.out.println("disk path : " + diskPath);
         File folder = new File(diskPath+"Data/");
         File[] listOfFiles = folder.listFiles();
@@ -146,125 +147,6 @@ public class LSMTree {
             mergeTwoSegments(diskPath+"Data/"+segmentIDs.get(i) + ".txt", diskPath+"Data/"+segmentIDs.get(i - 1) + ".txt");
         }
     }
-//    public void mergeCompaction() throws IOException {
-//        String replicaPath=  "/home/elemary/Projects/DataBaseManagement/Node_Number"+ nodeNumber +"/ReplicaOf"+replicaId+"/Data/";
-//
-//        int maxSize=maxSegmentSize;
-//        System.out.println("segmentNumber " + nextSegmentID );
-//        int tempID=1,size=0,counter;
-//        boolean i=false,j=false;
-//        if(nextSegmentID%2==1)counter=nextSegmentID-1;
-//        else counter=nextSegmentID;
-//        for(int k=0;k<counter;k+=2){
-//            String file1name=replicaPath+String.valueOf(k+1)+".txt";
-//            String file2name=replicaPath+String.valueOf(k+2)+".txt";
-//            File myObj = new File(file1name);
-//            File myObj2 = new File(file2name);
-//            File temp = new File(replicaPath+"t"+String.valueOf(tempID)+".txt");
-//            Scanner myReader = new Scanner(myObj);
-//            Scanner myReader2 = new Scanner(myObj2);
-//            FileWriter myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
-//            String data=myReader.nextLine(),data2=myReader2.nextLine();
-//
-//            String key1,key2;
-//            while (myReader.hasNextLine() && myReader2.hasNextLine()) {
-//                if(i)
-//                    data = myReader.nextLine();
-//                if(j)
-//                    data2 = myReader2.nextLine();
-//                key1=data.split(",")[0];
-//                key2=data2.split(",")[0];
-//                if(key1.equals(key2)){
-//                    myWriter.write(data2+'\n');
-//                    i=true;
-//                    j=true;
-//                }
-//                else if(key1.compareTo(key2)>0){
-//                    myWriter.write(data2+'\n');
-//                    i=false;
-//                    j=true;
-//                }
-//                else {
-//                    myWriter.write(data+'\n');
-//                    i=true;
-//                    j=false;
-//                }
-//                size++;
-//                if(size>=maxSize){
-//                    myWriter.close();
-//                    tempID++;
-//                    myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
-//                    size=0;
-//                }
-//            }
-//            if(!i) myWriter.write(data+'\n');
-//            if(!j) myWriter.write(data2+'\n');
-//            size++;
-//            if(size>=maxSize){
-//                myWriter.close();
-//                tempID++;
-//                myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
-//                size=0;
-//            }
-//            while (myReader.hasNextLine()){
-//                data=myReader.nextLine();
-//                myWriter.write(data+'\n');
-//                size++;
-//                if(size>=maxSize){
-//                    myWriter.close();
-//                    tempID++;
-//                    myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
-//                    size=0;
-//                }
-//            }
-//            while (myReader2.hasNextLine()){
-//                data=myReader2.nextLine();
-//                myWriter.write(data+'\n');
-//                size++;
-//                if(size>=maxSize){
-//                    myWriter.close();
-//                    tempID++;
-//                    myWriter = new FileWriter(replicaPath+"t"+String.valueOf(tempID)+".txt",true);
-//                    size=0;
-//                }
-//            }
-//            myReader.close();
-//            myReader2.close();
-//            myWriter.close();
-//            nextSegmentID-=2;
-//            segmentIDs.remove(0);
-//            segmentIDs.remove(0);
-//            i=false;
-//            j=false;
-//            if(size!=0)
-//                tempID++;
-//            size=0;
-//            myObj.delete();
-//            myObj2.delete();
-//        }
-//        segmentIDs.clear();
-//        System.out.println(tempID);
-//        for (int k = 1; k < tempID; k++) {
-//            File file = new File(replicaPath+"t"+String.valueOf(k)+".txt");
-//            File rename = new File(replicaPath+String.valueOf(k)+".txt");
-//            file.renameTo(rename);
-//            segmentIDs.add(String.valueOf(k));
-//        }
-//        segmentIDs.add(String.valueOf(tempID));
-//        if(new File(replicaPath+"t"+String.valueOf(tempID)+".txt").exists())
-//            new File(replicaPath+"t"+String.valueOf(tempID)+".txt").delete();
-//        if(nextSegmentID==1){
-//            File file = new File(replicaPath+String.valueOf(counter+1)+".txt");
-//            File rename = new File(replicaPath+String.valueOf(tempID)+".txt");
-//            file.renameTo(rename);
-//            segmentNumber=tempID;
-//        }
-//        else {
-//            segmentNumber=tempID-1;
-//        }
-//
-//
-//    }
     public String getValueOf(String key) throws IOException {
         // print row cache
         System.out.println("row cache");
@@ -279,13 +161,12 @@ public class LSMTree {
         if (memTable.search(key)!=null){
             return value;
         } else {
-            if (1==1){
-                System.out.println("Bloom Filter Get value of key: " + key);
+            if (bloomFilter.mightContain(key) || withCrashRecovery){
                 value = getValueFromSSTable(key,segmentIDs.size());
                 rowCache.put(key, value);
                 return value;
             } else {
-                System.out.println("Bloom Filter does not contain key: " + key);
+                System.out.println("Bloom Filter Missed value of key: " + key);
                 return null;
             }
         }
@@ -293,8 +174,13 @@ public class LSMTree {
     public void setValueOf(String key, String value) throws IOException {
         memTable.insert(key,value);
         memTableSize = memTable.size();
+        if(withCrashRecovery){
         commitLogs(key,value);
+        }
+        else {
         bloomFilter.put(key);
+        }
+
         if(rowCache.containsKey(key)){
             rowCache.remove(key);
         }
@@ -339,12 +225,7 @@ public class LSMTree {
         }
         segmentIDs.add(max+1);
         String path = diskPath+"commitLog"+replicaId+".txt";
-        String bloomFilterPath = diskPath+"bloomFilter"+replicaId+".txt";
-
         File commitFile = new File(path);
-        FileOutputStream out = new FileOutputStream(bloomFilterPath);
-        bloomFilter.writeTo(out);
-
         commitFile.delete();
         fileWriter.close();
     }
@@ -383,10 +264,9 @@ public class LSMTree {
         return getValueFromSSTable(key,fromSegment-1);
     }
     public void startCompaction() throws IOException, InterruptedException{
-            System.out.println("************************** Compaction Started **************************");
-            System.out.println("Segment IDs: "+segmentIDs);
-            CompactionThread compactionThread = new CompactionThread(this);
-            compactionThread.start();
+        System.out.println("---- Compaction Started for "+replicaId+"---");
+        CompactionThread compactionThread = new CompactionThread(this);
+        compactionThread.start();
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {

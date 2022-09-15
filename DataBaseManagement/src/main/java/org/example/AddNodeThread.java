@@ -25,9 +25,9 @@ public class AddNodeThread extends Thread{
                 Server.nodesReplicasMapping.printWhichReplicasBelongToNode();
                 Server.nodesReplicasMapping.printChangedNodes();
                 String newNodePort = request.split(" ")[1];
-                String newPartitionPath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ newNodePort +"/ReplicaOf"+ newNodePort +"/Data/";
+                String newPartitionPath = "" + Server.Path+"/Node_Number"+ newNodePort +"/ReplicaOf"+ newNodePort +"/Data/";
                 for(Integer entry : Server.nodesReplicasMapping.whichReplicasBelongToNode.get(currentPortNumber)) {
-                    String oldPartitionPath = "/home/elemary/Projects/DataBaseManagement/Node_Number"+ currentPortNumber  +"/ReplicaOf"+ entry +"/Data/";
+                    String oldPartitionPath = "" + Server.Path+"/Node_Number"+ currentPortNumber  +"/ReplicaOf"+ entry +"/Data/";
                     if(entry==currentPortNumber){
                         Rehash.createNewPartition(newPartitionPath, oldPartitionPath,false);
                     }

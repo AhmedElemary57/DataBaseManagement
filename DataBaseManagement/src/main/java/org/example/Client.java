@@ -92,16 +92,15 @@ public class Client {
     public static void main(String[] args) throws InterruptedException {
         Client client = new Client();
         Thread.sleep(10000);
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 1000; i++) {
             try {
-                Thread.sleep(100);
                 client.sendRequest("key"+i,"value"+i,true);
-                client.sendRequest("key"+i,"value"+i,false);
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
         }
+
 
 
 

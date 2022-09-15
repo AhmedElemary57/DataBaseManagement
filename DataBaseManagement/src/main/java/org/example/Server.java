@@ -11,6 +11,7 @@ import java.util.*;
 import java.util.concurrent.Semaphore;
 
 public class Server {
+    static String Path = System.getProperty("user.dir");
     static Semaphore sem = new Semaphore(1);
     static RingStructure ringStructure;
     static String currentValue = "Error 404 Not Found";
@@ -85,7 +86,7 @@ public class Server {
         return "Error 404 Not Found";
     }
     static LSMTree loadSegments(int replicaID, LSMTree crashRecovery) {
-        File segments = new File("/home/elemary/Projects/DataBaseManagement/Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/Data/");
+        File segments = new File("" + Server.Path+"/Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/Data/");
         if (segments.exists()) {
             File[] files = segments.listFiles();
             for (File file1 : files) {
@@ -98,7 +99,7 @@ public class Server {
         return crashRecovery;
     }
     static LSMTree loadCommitLog(int replicaID, LSMTree crashRecovery) {
-        File commitLog = new File("/home/elemary/Projects/DataBaseManagement/Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/"
+        File commitLog = new File("" + Server.Path+"/Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/"
                 + "commitLog" + replicaID + ".txt");
         if (commitLog.exists()) {
             Scanner myReader = null;
@@ -119,7 +120,7 @@ public class Server {
     public static  LSMTree loadBloomFilter(int replicaID, LSMTree crashRecovery) throws IOException {
 
         System.out.println("Loading Bloom Filter");
-        InputStream inStream = new FileInputStream("/home/elemary/Projects/DataBaseManagement/Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/"
+        InputStream inStream = new FileInputStream("" + Server.Path+"/Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/"
                 + "bloomFilter" + replicaID + ".txt");
 
         BloomFilter<String> bloomFilter
@@ -128,30 +129,24 @@ public class Server {
         return crashRecovery;
     }
     static LSMTree crash(int replicaID) throws IOException {
-        File file = new File("/home/elemary/Projects/DataBaseManagement/Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID);
+        File file = new File("" + Server.Path+"/Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID);
         if (file.exists()) {
             System.out.println("File exists and need to be reloaded in LSM tree ");
             LSMTree crashRecovery = new LSMTree(currentPortNumber, replicaID,maxMemTableSize, maxSegmentSize, true);
-            File segments = new File("/home/elemary/Projects/DataBaseManagement/Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/Data/");
+            //get files from Data folder
+            File segments = new File("" + Server.Path+"/Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID+"/Data/");
             if (segments.exists()) {
                 File[] files = segments.listFiles();
                 for (File file1 : files) {
                     if (file1.isFile()) {
                         crashRecovery.segmentIDs.add(Integer.valueOf(file1.getName().split("\\.")[0]));
+                        System.out.println("File name is " + file1.getName());
                     }
                 }
-                System.out.println("segmentIDs = " + crashRecovery.segmentIDs);
             }
-
-            File commitLog = new File("/home/elemary/Projects/DataBaseManagement/Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/"
-                    + "commitLog" + replicaID + ".txt");
+            File commitLog = new File("" + Server.Path+"/Node_Number"+ currentPortNumber +"/ReplicaOf"+replicaID+"/"+"commitLog"+replicaID+".txt");
             if (commitLog.exists()) {
-                Scanner myReader = null;
-                try {
-                    myReader = new Scanner(commitLog);
-                } catch (FileNotFoundException e) {
-                    throw new RuntimeException(e);
-                }
+                Scanner myReader = new Scanner(commitLog);
                 while (myReader.hasNextLine()) {
                     String data = myReader.nextLine();
                     List<String> dataSplit = Arrays.asList(data.split(","));
@@ -159,14 +154,8 @@ public class Server {
                     System.out.println("Key = " + dataSplit.get(0) + " Value = " + dataSplit.get(1));
                 }
             }
-            System.out.println("Loading Bloom Filter");
-          /*  InputStream inStream = new FileInputStream("/home/elemary/Projects/DataBaseManagement/Node_Number" + currentPortNumber + "/ReplicaOf" + replicaID + "/"
-                    + "bloomFilter" + replicaID + ".txt");
-
-            BloomFilter<String> bloomFilter
-                    = BloomFilter.readFrom(inStream, Funnels.stringFunnel(Charset.defaultCharset()));
-*/
             return crashRecovery;
+
         }
         return new LSMTree(currentPortNumber, replicaID,maxMemTableSize, maxSegmentSize, true);
     }
@@ -184,9 +173,7 @@ public class Server {
             for (LSMTree lsmTree : lsmTrees) {
                 if (lsmTree.getReplicaId() == neededPortNumber) {
                     lsmTree.commitLogs(key,value);
-
                     lsmTree.setValueOf(key, value);
-
                     if (withQuorum) {
                         response = getValueReadWriteQuorum(neededPortNumber, request, writeQuorum);
                         Requests.sendStringToSocket(sender, response);
@@ -251,23 +238,21 @@ public class Server {
         }
     }
     static void doCompaction() throws IOException, InterruptedException {
+        sem.acquire();
         new java.util.Timer().schedule(
                 new java.util.TimerTask() {
                     @Override
                     public void run() {
-                        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!! Compaction Started");
                         for (LSMTree lsmTree : lsmTrees) {
                             try {
-                                sem.acquire();
                                 lsmTree.startCompaction();
                             } catch (IOException | InterruptedException e) {
                                 throw new RuntimeException(e);
                             }
                         }
-                        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!! Compaction Finished");
                     }
 
-                },500, (long) nodeNumber * numberOfNodes * 500 + (long) numberOfNodes * nodeNumber*500
+                },1000, (long) nodeNumber * numberOfNodes * 2000 + (long) numberOfNodes * nodeNumber * 2000
         );
     }
 
@@ -303,8 +288,6 @@ public class Server {
             System.out.println("Without Crash Recovery");
             withCrashRecovery = false;
         }
-
-        // Create ring structure.
         ringStructure = RingStructure.getInstance(numberOfNodes, numberOfVirtualNodes, replicationFactor);
         ringStructure.buildMap(numberOfVirtualNodes);
         nodesReplicasMapping.printWhichReplicasBelongToNode();
@@ -313,15 +296,16 @@ public class Server {
         Map<Integer, List<Integer>> nodeReplicas = nodesReplicasMapping.whichReplicasBelongToNode;
         if (isAddedNode==1){
             System.out.println("Getting other replicas and sending the partition to other nodes  "+ nodeNumber);
-            Rearrange.start(nodeNumber, replicationFactor, "/home/elemary/Projects/DataBaseManagement/");
-            int t=5;
+            Rearrange.start(nodeNumber, replicationFactor, "" + Server.Path+"/");
+            System.out.println("******************************************************************\n\n\n"+ Server.Path);
+            int t=10;
             while (t-->0){
                 System.out.print("_ ");
-                Thread.sleep(500);
+                Thread.sleep(100);
             }
         }
+
         for (int i = 0; i < replicationFactor; i++) {
-            System.out.println("Replica " + i + " is in port " + nodeReplicas.get(currentPortNumber).get(i));
             if (withCrashRecovery){
                 LSMTree temp = crash(nodeReplicas.get(currentPortNumber).get(i));
                 lsmTrees.add(temp);
@@ -329,20 +313,24 @@ public class Server {
                 lsmTrees.add(new LSMTree(currentPortNumber, nodeReplicas.get(currentPortNumber).get(i), maxMemTableSize, maxSegmentSize, withCrashRecovery));
             }
         }
-        System.out.println("--- Set Up the server ");
-        int t=5;
+        System.out.println("Set Up the server ");
+        int t=10;
         while (t-->0){
             System.out.print("_ ");
-            Thread.sleep(1000);
+            Thread.sleep(100);
         }
+        System.out.println("\n");
+        System.out.println("Server start its automated compaction each " + numberOfNodes * nodeNumber * 2 + " s");
         doCompaction();
         if (currentPortNumber==5001){
             Requests.sendToPort(7777,args[1]+" "+args[2]+" "+args[3], false);
         }
+
         try (ServerSocket serverSocket = new ServerSocket(currentPortNumber)) {
 
             while (true) {
-                System.out.println(" ***** I am listening .... ");
+
+                System.out.println("-------------------------  Waiting for client request");
 
                 boolean withQuorum = true;
                 for (LSMTree lsmTree : lsmTrees) {
