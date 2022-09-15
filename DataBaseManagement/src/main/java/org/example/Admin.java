@@ -27,7 +27,7 @@ public class Admin {
                     "do\n" +
                     "   gnome-terminal -- bash -c \"java -jar " + userPath + " $i "
                     + data.get(0) + " " + data.get(1) + " " + data.get(2) + " " + data.get(3) +
-                    " " + data.get(4) + " " + data.get(5) + " " + data.get(6) +" 1"+" 0"+"; exec bash\"\n" +
+                    " " + data.get(4) + " " + data.get(5) + " " + data.get(6) + " " + data.get(7) +" 0"+"; exec bash\"\n" +
                     "done\n");
             myWriter.close();
             count = data.get(0);
@@ -48,7 +48,7 @@ public class Admin {
                     "gnome-terminal -- bash -c \"java -jar " + userPath + " "
                     + count + " "
                     + count + " " + data.get(1) + " " + data.get(2) + " " + data.get(3) +
-                    " " + data.get(4) + " " + data.get(5) + " " + data.get(6) + " 1"+" 1"+"; exec bash\"\n" );
+                    " " + data.get(4) + " " + data.get(5) + " " + data.get(6) + " " + data.get(7) +" 1"+"; exec bash\"\n" );
             myWriter.close();
 
             for (int i = 1; i < count ; i++) {

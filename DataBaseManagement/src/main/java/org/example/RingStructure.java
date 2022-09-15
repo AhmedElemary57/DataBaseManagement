@@ -1,12 +1,16 @@
 package org.example;
 
+import java.awt.*;
 import java.util.*;
+import java.util.List;
 
 import org.apache.commons.codec.digest.MurmurHash3;
 public class RingStructure {
-    public static List<Long> addedNode;
+    public static List<Integer> addedNode;
     int numberOfNodes, numberOfVirtualNodes, replicationFactor;
-    Map<Long,Integer> nodes_Ports = new HashMap<>();
+    Map<Integer, Integer> nodes_Ports = new HashMap<>();
+    static List<Integer> keys = new ArrayList<>();
+
 
     private volatile static RingStructure uniqueInstance;
     private RingStructure(int numberOfNodes, int numberOfVirtualNodes, int replicationFactor) {
@@ -20,7 +24,7 @@ public class RingStructure {
 
     }
     public static RingStructure getInstance(int numberOfNodes, int numberOfVirtualNodes, int replicationFactor) {
-        if (uniqueInstance==null){
+        if (uniqueInstance == null){
             synchronized (RingStructure.class){
                 if (uniqueInstance==null){
                     uniqueInstance= new RingStructure(numberOfNodes, numberOfVirtualNodes, replicationFactor);
@@ -52,7 +56,6 @@ public class RingStructure {
     }
     //5000 get numberOf nodes then number of virtual nodes
     // fixed to 10
-    static List<Long> keys = new ArrayList<>();
     void buildMap(int numberOfVirtualNodes) {
         final char startingSymbol = 'a';
         for (int i = 1; i <= numberOfNodes; i++) {
@@ -61,7 +64,7 @@ public class RingStructure {
                 String postfix = String.valueOf(j);
                 int portNumber = 5000 + i;
                 String vnName = prefix + postfix + portNumber;
-                long hashed = MurmurHash3.hash32x86(vnName.getBytes());
+                Integer hashed = MurmurHash3.hash32x86(vnName.getBytes());
                 keys.add(hashed);
                 nodes_Ports.put(hashed, portNumber);
             }
@@ -77,7 +80,7 @@ public class RingStructure {
             String postfix = String.valueOf(j);
             int portNumber = 5000 + numberOfNodes;
             String vnName = prefix + postfix + portNumber;
-            long hashed = MurmurHash3.hash32x86(vnName.getBytes());
+            Integer hashed = MurmurHash3.hash32x86(vnName.getBytes());
             keys.add(hashed);
             addedNode.add(hashed);
             nodes_Ports.put(hashed,portNumber);
@@ -92,13 +95,6 @@ public class RingStructure {
         System.out.println(addedNode);
     }
 
-    public static void main(String[] args) {
-        RingStructure ns = new RingStructure(5, 20, 3);
-        ns.buildMap(20);
-        System.out.println(ns.keys);
-        for(Map.Entry<Long,Integer> entry : ns.nodes_Ports.entrySet()){
-            System.out.println(entry.getKey() + " " + entry.getValue());
-        }
 
     public static ArrayList<Point> ranges() {
         ArrayList<Point> ranges = new ArrayList<>();
@@ -109,8 +105,13 @@ public class RingStructure {
             } else {
                 inx = inx - 1;
             }
-            Long start = keys.get(inx);
-            ranges.add(new ArrayList<>(Arrays.asList(start.toString(), end.toString())));
+            Integer start = keys.get(inx);
+            if (start <= end) {
+                ranges.add(new Point(start, end));
+            } else {
+                ranges.add(new Point(end, start));
+            }
+
         }
         return ranges;
     }

@@ -26,19 +26,27 @@ public class Rearrange {
         // Move replica from source to destination
 //            WatchThread watchThread = new WatchThread(destDir,StandardWatchEventKinds.ENTRY_DELETE);
 //            watchThread.start();
-            operation("mv", sourceSubDir, destDir);
-           // watchThread.join();
-            System.out.println("Moved replica from " + sourceSubDir + " to " + destSubDir);
-            Thread.sleep(500);
+        operation("mv", sourceSubDir, destDir);
+//            while (Files.exists(Paths.get(sourceSubDir))) {
+//                // just wait till the loop breaks.
+//            }
+
+       // watchThread.join();
+        System.out.println("Moved replica from " + sourceSubDir + " to " + destDir);
+        Thread.sleep(500);
 //            watchThread= new WatchThread(sourceDir,StandardWatchEventKinds.ENTRY_CREATE );
 //            // copy replica from destination to source
 //            watchThread.start();
-            operation("cp -R", destSubDir, sourceDir);
-            Thread.sleep(500);
+        operation("cp -R", destSubDir, sourceDir);
+        Thread.sleep(500);
+//            String x = sourceDir + "/ReplicaOf" + nodeNumber;
+//            while (Files.notExists(Paths.get(x))) {
+//                // just wait till the loop breaks.
+//            }
 //            watchThread.join();
-            System.out.println("Copied replica from " + destSubDir + " to " + sourceSubDir);
-            startingIndex++;
-        }
+        System.out.println("Copied replica from " + destSubDir + " to " + sourceDir);
+
+
     }
     public static void operation(String operation, String from, String to){
         String command = operation + " " + from + " " + to;

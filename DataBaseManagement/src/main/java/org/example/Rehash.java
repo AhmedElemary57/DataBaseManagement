@@ -3,6 +3,7 @@ package org.example;
 import org.apache.commons.codec.digest.MurmurHash3;
 import org.example.RingStructure;
 
+import java.awt.*;
 import java.io.File;
 import java.io.FileWriter;
 import java.util.ArrayList;
@@ -14,11 +15,11 @@ import java.util.Scanner;
 public class Rehash {
     static ArrayList<ArrayList<String>> ranges;
 
-    static boolean isInRange(String key, ArrayList<ArrayList<String>> ranges) {
+    static boolean isInRange(int hashedKey, ArrayList<Point> ranges) {
         for (int i = 0; i < ranges.size(); i++) {
-            String start = ranges.get(i).get(0);
-            String end = ranges.get(i).get(1);
-            if (key.compareTo(start) >= 0 && key.compareTo(end) <= 0) {
+            int start = ranges.get(i).x;
+            int end = ranges.get(i).y;
+            if (hashedKey >= start && hashedKey <= end) {
                 return true;
             }
         }
@@ -30,7 +31,7 @@ public class Rehash {
      * @param segmentPath : The path of the old ssTable file to transfer the data from it.
      *
      */
-    public static void createNewSegment(ArrayList<ArrayList<String>> ranges, String newNodePath, String newSegmentName, String segmentPath,boolean delete) throws IOException {
+    public static void createNewSegment(ArrayList<Point> ranges, String newNodePath, String newSegmentName, String segmentPath,boolean delete) throws IOException {
         System.out.println("Creating Segment"+newSegmentName);
         File oldFile = new File(segmentPath);
 
@@ -42,9 +43,10 @@ public class Rehash {
         while (myReader.hasNextLine()){
             String line = myReader.nextLine();
             String[] keyValue = line.split(",");
-            String hashedValue = String.valueOf(Long.valueOf(MurmurHash3.hash32x86(keyValue[0].getBytes())));
-            if (isInRange( hashedValue, ranges)) {
+            int hashedValue = MurmurHash3.hash32x86(keyValue[0].getBytes());
+            if (isInRange(hashedValue, ranges)) {
                 redBlackTree.insert(keyValue[0],keyValue[1]);
+                System.out.println("key == " + keyValue[0] + " with value == " + keyValue[1]);
             }
             else {
                 recordsRemain.add(line);
@@ -52,11 +54,11 @@ public class Rehash {
         }
         myReader.close();
         oldFile.delete();
-            FileWriter oldSegmentWriter = new FileWriter(oldFile);
-            for (String record:recordsRemain) {
-                oldSegmentWriter.write(record+"\n");
-            }
-            oldSegmentWriter.close();
+        FileWriter oldSegmentWriter = new FileWriter(oldFile);
+        for (String record:recordsRemain) {
+            oldSegmentWriter.write(record+"\n");
+        }
+        oldSegmentWriter.close();
         if(!delete){
             if (redBlackTree.size() == 0) {
                 return;

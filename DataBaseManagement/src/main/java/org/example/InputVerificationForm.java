@@ -18,6 +18,7 @@ public class InputVerificationForm extends JPanel {
     private static final int DEFAULT_SEGMENT = 10;
     private static final int DEFAULT_WRITE_QUORUM = 2;
     private static final int DEFAULT_READ_QUORUM = 2;
+    public static JCheckBox crashRecovery = new JCheckBox("Crash Recovery", true);
 
 
     //Strings for the labels
@@ -451,6 +452,8 @@ public class InputVerificationForm extends JPanel {
             }
             //startButton.setEnabled(false);
             addButton.setEnabled(true);
+            showChartButton.setEnabled(true);
+            crashRecovery.setEnabled(false);
         } );
 
 
@@ -458,6 +461,8 @@ public class InputVerificationForm extends JPanel {
         JPanel buttonPanel = new JPanel();
         buttonPanel.add(startButton);
         buttonPanel.add(addButton);
+        buttonPanel.add(showChartButton);
+        buttonPanel.add(crashRecovery);
         newContentPane.add(buttonPanel, BorderLayout.SOUTH);
 
         addButton.addActionListener(e -> {
@@ -504,6 +509,7 @@ public class InputVerificationForm extends JPanel {
             fields.add(formatter.parse(memTableField.getText()).intValue());
             fields.add(formatter.parse(writeQuorumField.getText()).intValue());
             fields.add(formatter.parse(readQuorumField.getText()).intValue());
+            fields.add(crashRecovery.isSelected() ? 1 : 0);
         } catch (ParseException pe) {
             pe.printStackTrace();
         }
