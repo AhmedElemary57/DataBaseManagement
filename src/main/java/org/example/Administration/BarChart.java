@@ -14,7 +14,8 @@ public class BarChart extends JPanel
 {
     static Color[] colors ={Color.RED, Color.BLUE, Color.GREEN, Color.YELLOW,
             Color.MAGENTA, Color.CYAN, Color.PINK,
-            Color.LIGHT_GRAY, Color.DARK_GRAY};
+            Color.LIGHT_GRAY, Color.DARK_GRAY,Color.ORANGE,Color.GRAY,Color.BLACK,Color.WHITE
+            ,Color.decode("#FFA500"),Color.decode("#FF0000"),Color.decode("#FF00FF"),Color.decode("#FFFF00"),Color.decode("#00FF00"),Color.decode("#00FFFF"),Color.decode("#0000FF")};
     static int counter=0;
 
     private Map<Color, Integer> bars =
